@@ -1,2 +1,8 @@
 *.jl.cov
 *.jl.mem
+*~
+.idea/
+target/
+*.class
+*.jar
+.juliahistory
