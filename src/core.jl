@@ -4,7 +4,7 @@ using JavaCall
 
 function init()    
     envcp = get(ENV, "CLASSPATH", "")
-    confdir = Pkg.dir("Sparta", "conf")
+    # confdir = Pkg.dir("Sparta", "conf")
     spartajar = Pkg.dir("Sparta", "lib", "sparta.jar")
     sparkjar = Pkg.dir("Sparta", "lib", "spark.jar")
     classpath = "$envcp:$confdir:$spartajar:$sparkjar"
@@ -33,6 +33,7 @@ function SparkContext(master::String="local", appname::String="This is Sparta!")
 end
 
 
+# TODO: RDD{T}?
 abstract RDD
 
 type JavaRDD <: RDD
