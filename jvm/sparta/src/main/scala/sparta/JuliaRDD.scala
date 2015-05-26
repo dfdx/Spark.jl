@@ -2,6 +2,7 @@ package sparta
 
 import java.io._
 import java.net._
+import java.util
 import java.util.{Collections, ArrayList => JArrayList, List => JList, Map => JMap}
 
 import org.apache.spark.annotation.DeveloperApi
@@ -26,17 +27,64 @@ import org.apache.spark.util.Utils
 import scala.util.control.NonFatal
 
 
-
-class JuliaRDD(@transient parent: RDD[_]) extends RDD[Array[Byte]](parent) {
+// TODO: pass Julia input and output types and Java serializer/deserializer class names
+// TODO: In Julia, `convert(T, bytes)` should be used to decode input and `convert(Array{Uint8}, t::T)` to serialize output
+// TODO: In Java, reflection should be used to instantiate serializer and deserializer
+// TODO: for now we can concentrate on strings
+class JuliaRDD(@transient parent: RDD[_], func: Array[Byte]) extends RDD[Array[Byte]](parent) {
 
   @DeveloperApi
   override def compute(split: Partition, context: TaskContext): Iterator[Array[Byte]] = {
-    // use JuliaWebAPI for communication? is it possible to pass function closure using it?
+    val inputIter = firstParent.iterator(split, context)
 
-    null
+    println("julia func as string (nonsense!): " + new String(func))
+
+
+//    // TODO: worker path should be different
+//    val pb = new ProcessBuilder("julia", "-L", "src/worker.jl", "-e", "SpockWorker.worker()")
+//    pb.redirectError(ProcessBuilder.Redirect.INHERIT)
+//    val worker = pb.start()
+//
+//    // send input
+//    val out = new DataOutputStream(new BufferedOutputStream(worker.getOutputStream()))
+//    func.write(out)
+//    out.writeInt(split.index.intValue())
+//    while(it.hasNext) {
+//      it.next().write(out)
+//    }
+//    out.writeInt(0)
+//    out.close()
+//
+//    // read results
+//    val in = new DataInputStream(new BufferedInputStream(worker.getInputStream()))
+//    val results = new util.LinkedList[JuliaObject]()
+//    while(true) {
+//      val obj = JuliaObject.read(in);
+//      if(obj == null) break
+//      results.add(obj)
+//    }
+//
+//    // finish up
+//    if(worker.waitFor() != 0) {
+//      throw new RuntimeException(String.format("Worker died with exitValue=%d", worker.exitValue()));
+//    } else {
+//      return results.iterator()
+//    }
+
+    val outputIter = new Iterator[Array[Byte]] {
+
+      // TODO: read from stdin
+      override def hasNext = false
+
+      override def next = null
+
+    }
+
+    new InterruptibleIterator(context, outputIter)
   }
 
   override protected def getPartitions: Array[Partition] = {
     firstParent.partitions
   }
+
 }
