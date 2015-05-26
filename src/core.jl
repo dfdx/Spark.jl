@@ -1,10 +1,6 @@
 
 using JavaCall
 
-JClass = @jimport java.lang.Class
-JArrays = @jimport java.util.Arrays
-JList = @jimport java.util.List
-JFunction2 = @jimport org.apache.spark.api.java.function.Function2
 JJavaRDD = @jimport org.apache.spark.api.java.JavaRDD
 JJavaSparkContext = @jimport org.apache.spark.api.java.JavaSparkContext
 
