@@ -1,11 +1,15 @@
 package sparta
 
+import org.apache.spark.SparkContext
+
 
 object Main {
 
   def main(args: Array[String]): Unit = {
-    new JuliaRDD(null, null)
-    println("ok, julia")
+    val sc = new SparkContext("local", "hello")
+    val rdd = sc.textFile("file:///var/log/syslog")
+    //new JuliaRDD(null, null)
+    //println("ok, julia")
   }
 
 }
