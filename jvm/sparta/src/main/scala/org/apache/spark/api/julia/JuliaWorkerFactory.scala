@@ -1,18 +1,25 @@
-package sparta
+package org.apache.spark.api.julia
 
-import java.io.{DataOutputStream, DataInputStream, InputStream, OutputStreamWriter}
-import java.net.{InetAddress, ServerSocket, Socket, SocketException}
-
-import scala.collection.mutable
-import scala.collection.JavaConversions._
+import java.io.DataInputStream
+import java.io.DataOutputStream
+import java.io.InputStream
+import java.io.OutputStreamWriter
+import java.net.InetAddress
+import java.net.ServerSocket
+import java.net.Socket
+import java.net.SocketException
 
 import org.apache.spark._
-import org.apache.spark.util.{RedirectThread, Utils}
+import org.apache.spark.util.RedirectThread
+import org.apache.spark.util.Utils
+
+import scala.collection.JavaConversions._
+import scala.collection.mutable
 
 private[spark] class JuliaWorkerFactory(pythonExec: String, envVars: Map[String, String])
   extends Logging {
 
-  import JuliaWorkerFactory._
+  import org.apache.spark.api.julia.JuliaWorkerFactory._
 
   // Because forking processes from Java is expensive, we prefer to launch a single Python daemon
   // (pyspark/daemon.py) and tell it to fork new workers for our tasks. This daemon currently
@@ -20,8 +27,11 @@ private[spark] class JuliaWorkerFactory(pythonExec: String, envVars: Map[String,
   // also fall back to launching workers (pyspark/worker.py) directly.
   val useDaemon = !System.getProperty("os.name").startsWith("Windows")
 
+
+  // TODO: do we need daemon capabilities in Julia?
+  // TODO: is the daemon the best way to do it? maybe pre-launch julia workers on all hosts?
   var daemon: Process = null
-  val daemonHost = InetAddress.getByAddress(Array(127, 0, 0, 1))
+  val daemonHost = InetAddress.getByAddress(Array(127, 0, 0, 1).map(_.toByte))
   var daemonPort: Int = 0
   val daemonWorkers = new mutable.WeakHashMap[Socket, Int]()
   val idleWorkers = new mutable.Queue[Socket]()
@@ -29,11 +39,6 @@ private[spark] class JuliaWorkerFactory(pythonExec: String, envVars: Map[String,
   new MonitorThread().start()
 
   var simpleWorkers = new mutable.WeakHashMap[Socket, Process]()
-
-  val pythonPath = PythonUtils.mergePythonPaths(
-    PythonUtils.sparkPythonPath,
-    envVars.getOrElse("PYTHONPATH", ""),
-    sys.env.getOrElse("PYTHONPATH", ""))
 
   def create(): Socket = {
     if (useDaemon) {
@@ -88,15 +93,12 @@ private[spark] class JuliaWorkerFactory(pythonExec: String, envVars: Map[String,
   private def createSimpleWorker(): Socket = {
     var serverSocket: ServerSocket = null
     try {
-      serverSocket = new ServerSocket(0, 1, InetAddress.getByAddress(Array(127, 0, 0, 1)))
+      serverSocket = new ServerSocket(0, 1, InetAddress.getByAddress(Array(127, 0, 0, 1).map(_.toByte)))
 
       // Create and start the worker
       val pb = new ProcessBuilder(Seq(pythonExec, "-m", "pyspark.worker"))
       val workerEnv = pb.environment()
       workerEnv.putAll(envVars)
-      workerEnv.put("PYTHONPATH", pythonPath)
-      // This is equivalent to setting the -u flag; we use it because ipython doesn't support -u:
-      workerEnv.put("PYTHONUNBUFFERED", "YES")
       val worker = pb.start()
 
       // Redirect worker stdout and stderr
@@ -137,9 +139,6 @@ private[spark] class JuliaWorkerFactory(pythonExec: String, envVars: Map[String,
         val pb = new ProcessBuilder(Seq(pythonExec, "-m", "pyspark.daemon"))
         val workerEnv = pb.environment()
         workerEnv.putAll(envVars)
-        workerEnv.put("PYTHONPATH", pythonPath)
-        // This is equivalent to setting the -u flag; we use it because ipython doesn't support -u:
-        workerEnv.put("PYTHONUNBUFFERED", "YES")
         daemon = pb.start()
 
         val in = new DataInputStream(daemon.getInputStream)
@@ -164,7 +163,7 @@ private[spark] class JuliaWorkerFactory(pythonExec: String, envVars: Map[String,
                                   |Error from python worker:
                                   |  $formattedStderr
                 |PYTHONPATH was:
-                |  $pythonPath
+                |  ...
                 |$e"""
 
             // Append error message from python daemon, but keep original stack trace

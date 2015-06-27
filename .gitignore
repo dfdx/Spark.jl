@@ -3,6 +3,7 @@
 *~
 .idea/
 target/
+project/
 *.class
 *.jar
 .juliahistory

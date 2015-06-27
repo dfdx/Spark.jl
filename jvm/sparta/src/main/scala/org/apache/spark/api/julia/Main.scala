@@ -1,4 +1,4 @@
-package sparta
+package org.apache.spark.api.julia
 
 import org.apache.spark.SparkContext
 
