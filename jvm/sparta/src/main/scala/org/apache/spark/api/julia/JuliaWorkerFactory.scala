@@ -33,7 +33,6 @@ private[spark] class JuliaWorkerFactory(envVars: Map[String, String])
       val worker = pb.start()
 
       // Redirect worker stdout and stderr
-      // TODO: why redirecting input stream?
       redirectStreamsToStderr(worker.getInputStream, worker.getErrorStream)
 
       // Tell the worker our port
@@ -49,7 +48,7 @@ private[spark] class JuliaWorkerFactory(envVars: Map[String, String])
         return socket
       } catch {
         case e: Exception =>
-          throw new SparkException("Python worker did not connect back in time", e)
+          throw new SparkException("Julia worker did not connect back in time", e)
       }
     } finally {
       if (serverSocket != null) {

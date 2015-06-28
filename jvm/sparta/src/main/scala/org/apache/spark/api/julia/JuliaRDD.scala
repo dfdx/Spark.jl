@@ -31,7 +31,7 @@ private[spark] class JuliaRDD(
   extends RDD[Array[Byte]](parent) {
 
 
-  val juliaWorkerFactory: JuliaWorkerFactory = new JuliaWorkerFactory(envVars.toMap) // TODO: convert to JMap
+  val juliaWorkerFactory: JuliaWorkerFactory = new JuliaWorkerFactory(envVars.toMap)
 
   val bufferSize = 65536
   val reuse_worker = true
