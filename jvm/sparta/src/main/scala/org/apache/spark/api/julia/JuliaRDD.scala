@@ -26,12 +26,12 @@ private[spark] class JuliaRDD(
     @transient parent: RDD[_],
     command: Array[Byte],
     envVars: JMap[String, String],
-    pythonIncludes: JList[String],
     preservePartitoning: Boolean,
-    pythonExec: String,
-    pythonVer: String,
     accumulator: Accumulator[JList[Array[Byte]]])
   extends RDD[Array[Byte]](parent) {
+
+
+  val juliaWorkerFactory: JuliaWorkerFactory = new JuliaWorkerFactory(envVars.toMap) // TODO: convert to JMap
 
   val bufferSize = 65536
   val reuse_worker = true
@@ -51,7 +51,8 @@ private[spark] class JuliaRDD(
     if (reuse_worker) {
       envVars += ("SPARK_REUSE_WORKER" -> "1")
     }
-    val worker: Socket = env.createPythonWorker(pythonExec, envVars.toMap)
+    val worker: Socket = juliaWorkerFactory.create()
+
     // Whether is the worker released into idle pool
     @volatile var released = false
 
@@ -116,7 +117,7 @@ private[spark] class JuliaRDD(
               val exLength = stream.readInt()
               val obj = new Array[Byte](exLength)
               stream.readFully(obj)
-              throw new PythonException(new String(obj, UTF_8),
+              throw new Exception(new String(obj, UTF_8),
                 writerThread.exception.getOrElse(null))
             case SpecialLengths.END_OF_DATA_SECTION =>
               // We've finished the data section of the output, but we can still
@@ -131,7 +132,8 @@ private[spark] class JuliaRDD(
               // Check whether the worker is ready to be re-used.
               if (stream.readInt() == SpecialLengths.END_OF_STREAM) {
                 if (reuse_worker) {
-                  env.releasePythonWorker(pythonExec, envVars.toMap, worker)
+                  // TODO
+                  // env.releasePythonWorker(pythonExec, envVars.toMap, worker)
                   released = true
                 }
               }
@@ -171,7 +173,7 @@ private[spark] class JuliaRDD(
    * Python process.
    */
   class WriterThread(env: SparkEnv, worker: Socket, split: Partition, context: TaskContext)
-    extends Thread(s"stdout writer for $pythonExec") {
+    extends Thread(s"stdout writer for julia") {
 
     @volatile private var _exception: Exception = null
 
@@ -193,34 +195,34 @@ private[spark] class JuliaRDD(
         // Partition index
         dataOut.writeInt(split.index)
         // Python version of driver
-        PythonRDD.writeUTF(pythonVer, dataOut)
+        // PythonRDD.writeUTF(pythonVer, dataOut)
         // sparkFilesDir
         PythonRDD.writeUTF(SparkFiles.getRootDirectory, dataOut)
         // Python includes (*.zip and *.egg files)
-        dataOut.writeInt(pythonIncludes.length)
-        for (include <- pythonIncludes) {
-          PythonRDD.writeUTF(include, dataOut)
-        }
+        // dataOut.writeInt(pythonIncludes.length)
+//        for (include <- pythonIncludes) {
+//          PythonRDD.writeUTF(include, dataOut)
+//        }
         // Broadcast variables
-        val oldBids = PythonRDD.getWorkerBroadcasts(worker)
-        val newBids = broadcastVars.map(_.id).toSet
+//        val oldBids = PythonRDD.getWorkerBroadcasts(worker)
+//        val newBids = broadcastVars.map(_.id).toSet
         // number of different broadcasts
-        val toRemove = oldBids.diff(newBids)
-        val cnt = toRemove.size + newBids.diff(oldBids).size
-        dataOut.writeInt(cnt)
-        for (bid <- toRemove) {
-          // remove the broadcast from worker
-          dataOut.writeLong(- bid - 1)  // bid >= 0
-          oldBids.remove(bid)
-        }
-        for (broadcast <- broadcastVars) {
-          if (!oldBids.contains(broadcast.id)) {
-            // send new broadcast
-            dataOut.writeLong(broadcast.id)
-            PythonRDD.writeUTF(broadcast.value.path, dataOut)
-            oldBids.add(broadcast.id)
-          }
-        }
+//        val toRemove = oldBids.diff(newBids)
+//        val cnt = toRemove.size + newBids.diff(oldBids).size
+//        dataOut.writeInt(cnt)
+//        for (bid <- toRemove) {
+//          // remove the broadcast from worker
+//          dataOut.writeLong(- bid - 1)  // bid >= 0
+//          oldBids.remove(bid)
+//        }
+//        for (broadcast <- broadcastVars) {
+//          if (!oldBids.contains(broadcast.id)) {
+//            // send new broadcast
+//            dataOut.writeLong(broadcast.id)
+//            PythonRDD.writeUTF(broadcast.value.path, dataOut)
+//            oldBids.add(broadcast.id)
+//          }
+//        }
         dataOut.flush()
         // Serialized command:
         dataOut.writeInt(command.length)
@@ -259,7 +261,7 @@ private[spark] class JuliaRDD(
    * threads can block indefinitely.
    */
   class MonitorThread(env: SparkEnv, worker: Socket, context: TaskContext)
-    extends Thread(s"Worker Monitor for $pythonExec") {
+    extends Thread(s"Worker Monitor for julia") {
 
     setDaemon(true)
 
@@ -272,7 +274,8 @@ private[spark] class JuliaRDD(
       if (!context.isCompleted) {
         try {
           logWarning("Incomplete task interrupted: Attempting to kill Python Worker")
-          env.destroyPythonWorker(pythonExec, envVars.toMap, worker)
+          // TODO: close/destroy Julia worker
+          // env.destroyPythonWorker(pythonExec, envVars.toMap, worker)
         } catch {
           case e: Exception =>
             logError("Exception when trying to kill worker", e)
