@@ -3,11 +3,17 @@ using JavaCall
 
 JList = @jimport java.util.List
 JArrays = @jimport java.util.Arrays
-JJuliaRDD = @jimport sparta.JuliaRDD
+JJuliaRDD = @jimport org.apache.spark.api.julia.JuliaRDD
 # for some reason using Scala's version lead to segfault
 JJavaRDD = @jimport org.apache.spark.api.java.JavaRDD
 JJavaSparkContext = @jimport org.apache.spark.api.java.JavaSparkContext
 
+
+# plan:
+#  1. create starter code for JuliaRDD (instantiate and call)
+#  2. smoke-test protocol between JuliaRDD and Julia worker
+#  3. figure out details of calling data iterator
+#  4. make everything else
 
 function init()
     envcp = get(ENV, "CLASSPATH", "")
@@ -34,5 +40,7 @@ function demo()
     sc = SparkContext()
     path = "file:///var/log/syslog"
     rdd = text_file(sc, path)
+    
 end
+
 

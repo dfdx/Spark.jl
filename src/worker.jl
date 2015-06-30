@@ -1,5 +1,7 @@
 
 function launch_worker()
     port = int(readline(STDIN))
-    println("Connecting to port $port !")
+    info("JuliaWorker: Connecting to port $(port)!")
+    connect("127.0.0.1", port)
+    info("JuliaWorker: Connected!")
 end
