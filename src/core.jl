@@ -1,11 +1,13 @@
 
+
 using JavaCall
 
 JList = @jimport java.util.List
 JArrays = @jimport java.util.Arrays
 JJuliaRDD = @jimport org.apache.spark.api.julia.JuliaRDD
-# for some reason using Scala's version lead to segfault
 JJavaRDD = @jimport org.apache.spark.api.java.JavaRDD
+JJavaRDD_ = @jimport "org.apache.spark.api.java.JavaRDD\$"
+JRDD = @jimport org.apache.spark.rdd.RDD
 JJavaSparkContext = @jimport org.apache.spark.api.java.JavaSparkContext
 
 
@@ -17,9 +19,8 @@ JJavaSparkContext = @jimport org.apache.spark.api.java.JavaSparkContext
 
 function init()
     envcp = get(ENV, "CLASSPATH", "")
-    spartajar = Pkg.dir("Sparta", "jvm", "target", "scala-2.10",
-                        "sparta_2.10-1.0.jar")
-    sparkjar = Pkg.dir("Sparta", "lib", "spark.jar")
+    spartajar = Pkg.dir("Sparta", "jvm", "sparta", "target", "sparta-0.1.jar")
+    sparkjar = Pkg.dir("Sparta", "lib", "spark.jar")  # this should be spark-assembly-*.jar
     classpath = "$envcp:$spartajar:$sparkjar"
     try
         # prevent exceptions in REPL
@@ -39,7 +40,9 @@ include("worker.jl")
 function demo()
     sc = SparkContext()
     path = "file:///var/log/syslog"
-    rdd = text_file(sc, path)
+    rdd = text_file(sc, path) # JavaRDD
+    
+    julia_rdd = JJuliaRDD((JJavaRDD,), rdd.jrdd)
     
 end
 

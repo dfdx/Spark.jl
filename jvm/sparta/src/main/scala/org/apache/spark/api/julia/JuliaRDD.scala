@@ -24,14 +24,15 @@ import scala.language.existentials
 import scala.util.control.NonFatal
 
 private[spark] class JuliaRDD(
-    @transient parent: RDD[_],
-    command: Array[Byte]
+    @transient parent: RDD[_]
+//    command: Array[Byte]
 //    envVars: JMap[String, String],
 //    preservePartitioning: Boolean,
 //    accumulator: Accumulator[JList[Array[Byte]]]
 )
   extends RDD[Array[Byte]](parent) {
 
+  val command = Array[Byte]()                       // TODO
   val envVars = new util.HashMap[String, String]()  // TODO
   val preservePartitioning = true                   // TODO
 
