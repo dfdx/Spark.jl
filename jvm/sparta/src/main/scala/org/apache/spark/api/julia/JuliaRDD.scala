@@ -23,16 +23,16 @@ import scala.collection.mutable
 import scala.language.existentials
 import scala.util.control.NonFatal
 
-private[spark] class JuliaRDD(
-    @transient parent: RDD[_]
-//    command: Array[Byte]
+class JuliaRDD(
+    @transient parent: RDD[_],
+    command: Array[Byte]
 //    envVars: JMap[String, String],
 //    preservePartitioning: Boolean,
 //    accumulator: Accumulator[JList[Array[Byte]]]
 )
   extends RDD[Array[Byte]](parent) {
 
-  val command = Array[Byte]()                       // TODO
+  // val command = Array[Byte]()                       // TODO
   val envVars = new util.HashMap[String, String]()  // TODO
   val preservePartitioning = true                   // TODO
 
@@ -201,7 +201,10 @@ private object SpecialLengths {
   val NULL = -5
 }
 
-private[spark] object JuliaRDD extends Logging {
+object JuliaRDD extends Logging {
+
+
+  def fromJavaRDD[T](javaRdd: JavaRDD[T], command: Array[Byte]): JuliaRDD = new JuliaRDD(JavaRDD.toRDD(javaRdd), command)
 
   /**
    * Adapter for calling SparkContext#runJob from Python.

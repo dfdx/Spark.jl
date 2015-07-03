@@ -41,8 +41,8 @@ function demo()
     sc = SparkContext()
     path = "file:///var/log/syslog"
     rdd = text_file(sc, path) # JavaRDD
-    
-    julia_rdd = JJuliaRDD((JJavaRDD,), rdd.jrdd)
+    # jcall(JJuliaRDD, "fromJavaRDD", JJuliaRDD, (JJavaRDD,), rdd.jrdd)
+    julia_rdd = JuliaRDD(rdd, jbyte[])
     
 end
 
