@@ -1,5 +1,4 @@
 
-
 using JavaCall
 
 JList = @jimport java.util.List
@@ -19,8 +18,9 @@ JJavaSparkContext = @jimport org.apache.spark.api.java.JavaSparkContext
 
 function init()
     envcp = get(ENV, "CLASSPATH", "")
+    # this should be sparta-assembly-*.jar
     spartajar = Pkg.dir("Sparta", "jvm", "sparta", "target", "sparta-0.1.jar")
-    sparkjar = Pkg.dir("Sparta", "lib", "spark.jar")  # this should be spark-assembly-*.jar
+    sparkjar = Pkg.dir("Sparta", "lib", "spark.jar")  
     classpath = "$envcp:$spartajar:$sparkjar"
     try
         # prevent exceptions in REPL
@@ -40,10 +40,10 @@ include("worker.jl")
 function demo()
     sc = SparkContext()
     path = "file:///var/log/syslog"
-    rdd = text_file(sc, path) # JavaRDD
-    # jcall(JJuliaRDD, "fromJavaRDD", JJuliaRDD, (JJavaRDD,), rdd.jrdd)
+    rdd = text_file(sc, path) # JavaRDD    
     julia_rdd = JuliaRDD(rdd, jbyte[])
-    
+    jcall(julia_rdd.jrdd, "collect", JObject, ())
+    listmethods(julia_rdd.jrdd, "collect")
 end
 
 
