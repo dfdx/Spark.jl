@@ -12,15 +12,10 @@ import org.apache.spark.util.RedirectThread
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 
-private[spark] class JuliaWorkerFactory(envVars: Map[String, String])
-  extends Logging {
-
+private[spark] class JuliaWorkerFactory(envVars: Map[String, String]) extends Logging {
 
   var workers = new mutable.WeakHashMap[Socket, Process]()
 
-  /**
-   * Launch a worker by loading Sparta.Worker and telling it to connect to us.
-   */
   def create(): Socket = {
     var serverSocket: ServerSocket = null
     try {

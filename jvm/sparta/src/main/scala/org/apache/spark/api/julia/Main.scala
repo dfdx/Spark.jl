@@ -9,8 +9,8 @@ object Main {
     val sc = new SparkContext("local", "hello")
     val rdd = sc.textFile("file:///var/log/syslog")
     rdd.collect()
-    // val jlRdd = new JuliaRDD(rdd, new Array[Byte](0))
-    // jlRdd.collect()
+    val jlRdd = new JuliaRDD(rdd, new Array[Byte](10))
+    jlRdd.collect()
     //println("ok, julia")
   }
 

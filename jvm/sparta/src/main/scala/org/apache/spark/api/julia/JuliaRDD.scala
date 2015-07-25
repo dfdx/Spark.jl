@@ -16,7 +16,7 @@ import org.apache.spark.api.java.JavaRDD
 import org.apache.spark.api.java.JavaSparkContext
 import org.apache.spark.input.PortableDataStream
 import org.apache.spark.rdd.RDD
-import org.apache.spark.util.Utils
+import org.apache.spark.util.{RedirectThread, Utils}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
@@ -29,17 +29,15 @@ class JuliaRDD(
 //    envVars: JMap[String, String],
 //    preservePartitioning: Boolean,
 //    accumulator: Accumulator[JList[Array[Byte]]]
-)
-  extends RDD[Array[Byte]](parent) {
+) extends RDD[Array[Byte]](parent) {
 
-  // val command = Array[Byte]()                       // TODO
   val envVars = new util.HashMap[String, String]()  // TODO
   val preservePartitioning = true                   // TODO
 
-  val juliaWorkerFactory: JuliaWorkerFactory = new JuliaWorkerFactory(envVars.toMap)
+  // @transient val juliaWorkerFactory: JuliaWorkerFactory = new JuliaWorkerFactory(envVars.toMap)
 
   val bufferSize = 65536
-  val reuse_worker = true
+  val reuseWorker = true
 
   override def getPartitions: Array[Partition] = firstParent.partitions
 
@@ -49,7 +47,8 @@ class JuliaRDD(
 
   override def compute(split: Partition, context: TaskContext): Iterator[Array[Byte]] = {
     val env = SparkEnv.get
-    val worker: Socket = juliaWorkerFactory.create()
+    // return Collections.emptyList[Array[Byte]]().iterator()
+    val worker: Socket = JuliaRDD.createWorker()
 
     // Start a thread to feed the process input from our parent's iterator
     val writerThread = new WriterThread(env, worker, split, context)
@@ -84,9 +83,10 @@ class JuliaRDD(
               stream.readFully(obj)
               throw new Exception(new String(obj, UTF_8),
                 writerThread.exception.getOrElse(null))
-//            case SpecialLengths.END_OF_DATA_SECTION =>
-//              // We've finished the data section of the output, but we can still
-//              // read some accumulator updates:
+            case SpecialLengths.END_OF_DATA_SECTION =>
+              println("We are done!")
+              // We've finished the data section of the output, but we can still
+              // read some accumulator updates:
 //              val numAccumulatorUpdates = stream.readInt()
 //              (1 to numAccumulatorUpdates).foreach { _ =>
 //                val updateLen = stream.readInt()
@@ -102,7 +102,7 @@ class JuliaRDD(
 //                  released = true
 //                }
 //              }
-//              null
+              null
           }
         } catch {
 
@@ -203,8 +203,57 @@ private object SpecialLengths {
 
 object JuliaRDD extends Logging {
 
-
   def fromJavaRDD[T](javaRdd: JavaRDD[T], command: Array[Byte]): JuliaRDD = new JuliaRDD(JavaRDD.toRDD(javaRdd), command)
+
+  def createWorker(): Socket = {
+    var serverSocket: ServerSocket = null
+    try {
+      serverSocket = new ServerSocket(0, 1, InetAddress.getByAddress(Array(127, 0, 0, 1).map(_.toByte)))
+
+      // Create and start the worker
+      val pb = new ProcessBuilder(Seq("julia", "-e", "using Sparta; Sparta.launch_worker()"))
+      val workerEnv = pb.environment()
+      // workerEnv.putAll(envVars)
+      val worker = pb.start()
+
+      // Redirect worker stdout and stderr
+      redirectStreamsToStderr(worker.getInputStream, worker.getErrorStream)
+
+      // Tell the worker our port
+      val out = new OutputStreamWriter(worker.getOutputStream)
+      out.write(serverSocket.getLocalPort + "\n")
+      out.flush()
+
+      // Wait for it to connect to our socket
+      serverSocket.setSoTimeout(10000)
+      try {
+        val socket = serverSocket.accept()
+        // workers.put(socket, worker)
+        return socket
+      } catch {
+        case e: Exception =>
+          throw new SparkException("Julia worker did not connect back in time", e)
+      }
+    } finally {
+      if (serverSocket != null) {
+        serverSocket.close()
+      }
+    }
+    null
+  }
+
+  /**
+   * Redirect the given streams to our stderr in separate threads.
+   */
+  private def redirectStreamsToStderr(stdout: InputStream, stderr: InputStream) {
+    try {
+      new RedirectThread(stdout, System.err, "stdout reader for julia").start()
+      new RedirectThread(stderr, System.err, "stderr reader for julia").start()
+    } catch {
+      case e: Exception =>
+        logError("Exception in redirecting streams", e)
+    }
+  }
 
   /**
    * Adapter for calling SparkContext#runJob from Python.

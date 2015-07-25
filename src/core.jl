@@ -10,11 +10,7 @@ JRDD = @jimport org.apache.spark.rdd.RDD
 JJavaSparkContext = @jimport org.apache.spark.api.java.JavaSparkContext
 
 
-# plan:
-#  1. create starter code for JuliaRDD (instantiate and call)
-#  2. smoke-test protocol between JuliaRDD and Julia worker
-#  3. figure out details of calling data iterator
-#  4. make everything else
+# current task: work out Java-Julia protocol
 
 function init()
     envcp = get(ENV, "CLASSPATH", "")
