@@ -74,6 +74,7 @@ class JuliaRDD(
             case length if length > 0 =>
               val obj = new Array[Byte](length)
               stream.readFully(obj)
+              println("OBJECT: " + new String(obj, "UTF-8"))
               obj
             case 0 => Array.empty[Byte]
             case SpecialLengths.JULIA_EXCEPTION_THROWN =>
@@ -212,7 +213,7 @@ object JuliaRDD extends Logging {
 
       // Create and start the worker
       val pb = new ProcessBuilder(Seq("julia", "-e", "using Sparta; Sparta.launch_worker()"))
-      val workerEnv = pb.environment()
+      // val workerEnv = pb.environment()
       // workerEnv.putAll(envVars)
       val worker = pb.start()
 
