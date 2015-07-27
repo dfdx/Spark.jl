@@ -85,25 +85,12 @@ class JuliaRDD(
               throw new Exception(new String(obj, UTF_8),
                 writerThread.exception.getOrElse(null))
             case SpecialLengths.END_OF_DATA_SECTION =>
-              println("We are done!")
-              // We've finished the data section of the output, but we can still
-              // read some accumulator updates:
-//              val numAccumulatorUpdates = stream.readInt()
-//              (1 to numAccumulatorUpdates).foreach { _ =>
-//                val updateLen = stream.readInt()
-//                val update = new Array[Byte](updateLen)
-//                stream.readFully(update)
-//                accumulator += Collections.singletonList(update)
-//              }
-//              // Check whether the worker is ready to be re-used.
-//              if (stream.readInt() == SpecialLengths.END_OF_STREAM) {
-//                if (reuse_worker) {
-//                  // TODO
-//                  // env.releasePythonWorker(pythonExec, envVars.toMap, worker)
-//                  released = true
-//                }
-//              }
-              null
+              if (stream.readInt() == SpecialLengths.END_OF_STREAM) {
+                null
+              } else {
+                throw new RuntimeException("Protocol error")
+              }
+
           }
         } catch {
 
