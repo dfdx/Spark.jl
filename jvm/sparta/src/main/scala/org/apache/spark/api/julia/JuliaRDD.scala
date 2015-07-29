@@ -26,15 +26,9 @@ import scala.util.control.NonFatal
 class JuliaRDD(
     @transient parent: RDD[_],
     command: Array[Byte]
-//    envVars: JMap[String, String],
-//    preservePartitioning: Boolean,
-//    accumulator: Accumulator[JList[Array[Byte]]]
 ) extends RDD[Array[Byte]](parent) {
 
-  val envVars = new util.HashMap[String, String]()  // TODO
-  val preservePartitioning = true                   // TODO
-
-  // @transient val juliaWorkerFactory: JuliaWorkerFactory = new JuliaWorkerFactory(envVars.toMap)
+  val preservePartitioning = true
 
   val bufferSize = 65536
   val reuseWorker = true
@@ -47,13 +41,10 @@ class JuliaRDD(
 
   override def compute(split: Partition, context: TaskContext): Iterator[Array[Byte]] = {
     val env = SparkEnv.get
-    // return Collections.emptyList[Array[Byte]]().iterator()
     val worker: Socket = JuliaRDD.createWorker()
-
     // Start a thread to feed the process input from our parent's iterator
     val writerThread = new WriterThread(env, worker, split, context)
     writerThread.start()
-
     // Return an iterator that read lines from the process's stdout
     val stream = new DataInputStream(new BufferedInputStream(worker.getInputStream, bufferSize))
     val stdoutIterator = new Iterator[Array[Byte]] {
@@ -130,8 +121,6 @@ class JuliaRDD(
 
     @volatile private var _exception: Exception = null
 
-    // setDaemon(true)
-
     /** Contains the exception thrown while writing the parent iterator to the Julia process. */
     def exception: Option[Exception] = Option(_exception)
 
@@ -145,13 +134,14 @@ class JuliaRDD(
       try {
         val stream = new BufferedOutputStream(worker.getOutputStream, bufferSize)
         val dataOut = new DataOutputStream(stream)
-        // Partition index
+        // partition index
         dataOut.writeInt(split.index)
         dataOut.flush()
-        // Serialized command:
+        // serialized command:
         dataOut.writeInt(command.length)
         dataOut.write(command)
-        // Data values
+        dataOut.flush()
+        // data values
         JuliaRDD.writeIteratorToStream(firstParent.iterator(split, context), dataOut)
         dataOut.writeInt(SpecialLengths.END_OF_DATA_SECTION)
         dataOut.writeInt(SpecialLengths.END_OF_STREAM)
