@@ -233,75 +233,11 @@ object JuliaRDD extends Logging {
     }
   }
 
-  /**
-   * Adapter for calling SparkContext#runJob from Python.
-   *
-   * This method will serve an iterator of an array that contains all elements in the RDD
-   * (effectively a collect()), but allows you to run on a certain subset of partitions,
-   * or to enable local execution.
-   *
-   * @return the port number of a local socket which serves the data collected from this job.
-   */
-  def runJob(
-              sc: SparkContext,
-              rdd: JavaRDD[Array[Byte]],
-              partitions: JArrayList[Int],
-              allowLocal: Boolean): Int = {
-    type ByteArray = Array[Byte]
-    type UnrolledPartition = Array[ByteArray]
-    val allPartitions: Array[UnrolledPartition] =
-      sc.runJob(rdd, (x: Iterator[ByteArray]) => x.toArray, partitions, allowLocal)
-    val flattenedPartition: UnrolledPartition = Array.concat(allPartitions: _*)
-    serveIterator(flattenedPartition.iterator,
-      s"serve RDD ${rdd.id} with partitions ${partitions.mkString(",")}")
-  }
-
-  /**
-   * A helper function to collect an RDD as an iterator, then serve it via socket.
-   *
-   * @return the port number of a local socket which serves the data collected from this job.
-   */
-  def collectAndServe[T](rdd: RDD[T]): Int = {
-    serveIterator(rdd.collect().iterator, s"serve RDD ${rdd.id}")
-  }
-
-  def readRDDFromFile(sc: JavaSparkContext, filename: String, parallelism: Int):
-  JavaRDD[Array[Byte]] = {
-    val file = new DataInputStream(new FileInputStream(filename))
-    try {
-      val objs = new collection.mutable.ArrayBuffer[Array[Byte]]
-      try {
-        while (true) {
-          val length = file.readInt()
-          val obj = new Array[Byte](length)
-          file.readFully(obj)
-          objs.append(obj)
-        }
-      } catch {
-        case eof: EOFException => {}
-      }
-      JavaRDD.fromRDD(sc.sc.parallelize(objs, parallelism))
-    } finally {
-      file.close()
-    }
-  }
-
 
   def writeIteratorToStream[T](iter: Iterator[T], dataOut: DataOutputStream) {
 
     def write(obj: Any): Unit = obj match {
-      case null =>
-        dataOut.writeInt(SpecialLengths.NULL)
       case arr: Array[Byte] =>
-        dataOut.writeInt(arr.length)
-        dataOut.write(arr)
-      case str: String =>
-        writeUTF(str, dataOut)
-      case stream: PortableDataStream =>
-        write(stream.toArray())
-      case (key, value) =>
-        write(key)
-        write(value)
       case other =>
         throw new SparkException("Unexpected element type " + other.getClass)
     }
@@ -309,60 +245,5 @@ object JuliaRDD extends Logging {
     iter.foreach(write)
   }
 
-
-  def writeUTF(str: String, dataOut: DataOutputStream) {
-    val bytes = str.getBytes(UTF_8)
-    dataOut.writeInt(bytes.length)
-    dataOut.write(bytes)
-  }
-
-  /**
-   * Create a socket server and a background thread to serve the data in `items`,
-   *
-   * The socket server can only accept one connection, or close if no connection
-   * in 3 seconds.
-   *
-   * Once a connection comes in, it tries to serialize all the data in `items`
-   * and send them into this connection.
-   *
-   * The thread will terminate after all the data are sent or any exceptions happen.
-   */
-  private def serveIterator[T](items: Iterator[T], threadName: String): Int = {
-    val serverSocket = new ServerSocket(0, 1, InetAddress.getByName("localhost"))
-    // Close the socket if no connection in 3 seconds
-    serverSocket.setSoTimeout(3000)
-
-    new Thread(threadName) {
-      setDaemon(true)
-      override def run() {
-        try {
-          val sock = serverSocket.accept()
-          val out = new DataOutputStream(new BufferedOutputStream(sock.getOutputStream))
-//          Utils.tryWithSafeFinally {
-//            writeIteratorToStream(items, out)
-//          } {
-//            out.close()
-//          }
-          try {
-            writeIteratorToStream(items, out)
-          } finally {
-            out.close()
-          }
-        } catch {
-          case NonFatal(e) =>
-            logError(s"Error while sending iterator", e)
-        } finally {
-          serverSocket.close()
-        }
-      }
-    }.start()
-
-    serverSocket.getLocalPort
-  }
-
-}
-
-private class BytesToString extends org.apache.spark.api.java.function.Function[Array[Byte], String] {
-  override def call(arr: Array[Byte]) : String = new String(arr, UTF_8)
 }
 

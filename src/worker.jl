@@ -41,7 +41,6 @@ function dump_stream(sock::TcpSocket, it::Task)
     for v in it
         writeobj(sock, v)
     end
-    info("JuliaWorker: iterator dumped")
 end
 
 
@@ -52,11 +51,13 @@ function launch_worker()
     try
         part_id = readint(sock)
         info("Julia: partition id = $part_id")
-        cmd = readobj(sock)
+        cmd = readobj(sock)[2]
+        print("Julia: command = $cmd")
+        func = deserialize(IOBuffer(cmd))
         # we need to get iterator to apply function to it,
         # but actually data is loaded actively (both ways)
         it = load_stream(sock)
-        func = identity # TODO: decode command from JVM
+        func = identity
         dump_stream(sock, func(it))        
         writeint(sock, END_OF_DATA_SECTION)
         writeint(sock, END_OF_STREAM)
@@ -68,3 +69,5 @@ function launch_worker()
         rethrow()
     end
 end
+
+
