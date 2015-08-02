@@ -16,7 +16,7 @@ function init()
     envcp = get(ENV, "CLASSPATH", "")
     # this should be sparta-assembly-*.jar
     spartajar = Pkg.dir("Sparta", "jvm", "sparta", "target", "sparta-0.1.jar")
-    sparkjar = Pkg.dir("Sparta", "lib", "spark.jar")  
+    sparkjar = Pkg.dir("Sparta", "lib", "spark.jar")
     classpath = "$envcp:$spartajar:$sparkjar"
     try
         # prevent exceptions in REPL
@@ -46,10 +46,9 @@ function demo()
     sc = SparkContext()
     path = "file:///var/log/syslog"
     rdd = text_file(sc, path) # JavaRDD
-    cmd = ser(identity)
-    print(cmd)
-    julia_rdd = JuliaRDD(rdd, cmd)
-    jcall(julia_rdd.jrdd, "collect", JObject, ())    
+    julia_rdd = JuliaRDD(rdd, ser(identity))
+    r = jcall(julia_rdd.jrdd, "collect", JObject, ())
+    listmethods(julia_rdd.jrdd, "collect")
 end
 
 
@@ -85,4 +84,4 @@ end
 ##  116
 ##  121
 
-## julia> 
+## julia>

@@ -2,26 +2,15 @@ package org.apache.spark.api.julia
 
 import java.io._
 import java.net._
-import java.util
-import java.util.Collections
-import java.util.{ArrayList => JArrayList}
-import java.util.{List => JList}
-import java.util.{Map => JMap}
 
-import com.google.common.base.Charsets.UTF_8
-import org.apache.hadoop.mapreduce.{InputFormat => NewInputFormat}
-import org.apache.hadoop.mapreduce.{OutputFormat => NewOutputFormat}
+import org.apache.commons.compress.utils.Charsets
 import org.apache.spark._
 import org.apache.spark.api.java.JavaRDD
-import org.apache.spark.api.java.JavaSparkContext
-import org.apache.spark.input.PortableDataStream
 import org.apache.spark.rdd.RDD
 import org.apache.spark.util.{RedirectThread, Utils}
 
 import scala.collection.JavaConversions._
-import scala.collection.mutable
 import scala.language.existentials
-import scala.util.control.NonFatal
 
 class JuliaRDD(
     @transient parent: RDD[_],
@@ -73,7 +62,7 @@ class JuliaRDD(
               val exLength = stream.readInt()
               val obj = new Array[Byte](exLength)
               stream.readFully(obj)
-              throw new Exception(new String(obj, UTF_8),
+              throw new Exception(new String(obj, Charsets.UTF_8),
                 writerThread.exception.getOrElse(null))
             case SpecialLengths.END_OF_DATA_SECTION =>
               if (stream.readInt() == SpecialLengths.END_OF_STREAM) {
@@ -238,11 +227,21 @@ object JuliaRDD extends Logging {
 
     def write(obj: Any): Unit = obj match {
       case arr: Array[Byte] =>
+        dataOut.writeInt(arr.length)
+        dataOut.write(arr)
+      case str: String =>
+        writeUTF(str, dataOut)
       case other =>
         throw new SparkException("Unexpected element type " + other.getClass)
     }
 
     iter.foreach(write)
+  }
+
+  def writeUTF(str: String, dataOut: DataOutputStream) {
+    val bytes = str.getBytes(Charsets.UTF_8)
+    dataOut.writeInt(bytes.length)
+    dataOut.write(bytes)
   }
 
 }
