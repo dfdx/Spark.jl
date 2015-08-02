@@ -54,7 +54,6 @@ class JuliaRDD(
             case length if length > 0 =>
               val obj = new Array[Byte](length)
               stream.readFully(obj)
-              println("OBJECT: " + new String(obj, "UTF-8"))
               obj
             case 0 => Array.empty[Byte]
             case SpecialLengths.JULIA_EXCEPTION_THROWN =>
@@ -100,6 +99,10 @@ class JuliaRDD(
   }
 
   val asJavaRDD : JavaRDD[Array[Byte]] = JavaRDD.fromRDD(this)
+
+  override def collect(): Array[Array[Byte]] = {
+    super.collect()
+  }
 
   /**
    * The thread responsible for writing the data from the JuliaRDD's parent iterator to the
