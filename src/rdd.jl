@@ -16,4 +16,8 @@ function PipelinedRDD(parent::RDD, func::Array{Uint8, 1})
     PipelinedRDD(jrdd)
 end
     
+function collect{T}(rdd::RDD, typ::Type{T}=Array{Array{jbyte,1},1})
+    res = jcall(rdd.jrdd, "collect", JObject, ())
+    return convert(T, res)
+end
 

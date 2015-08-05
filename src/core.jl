@@ -1,10 +1,12 @@
 
+using Docile
 using JavaCall
 
 
 JJavaSparkContext = @jimport org.apache.spark.api.java.JavaSparkContext
 JJavaRDD = @jimport org.apache.spark.api.java.JavaRDD
 JJuliaRDD = @jimport org.apache.spark.api.julia.JuliaRDD
+
 
 include("init.jl")
 include("serialization.jl")
