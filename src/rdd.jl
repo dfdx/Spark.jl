@@ -8,6 +8,7 @@ end
 
 type PipelinedRDD <: RDD
     parent::RDD
+    func::Function
     jrdd::JJuliaRDD
 end
 
@@ -18,16 +19,20 @@ function PipelinedRDD(parent::RDD, func::Function)
         jrdd = jcall(JJuliaRDD, "fromJavaRDD", JJuliaRDD,
                      (JJavaRDD, Array{jbyte, 1}),
                      parent.jrdd, convert(Array{jbyte, 1}, command))
-        PipelinedRDD(parent, jrdd)
+        PipelinedRDD(parent, func, jrdd)
     else
-        pipeline_func = (split, it) -> func(split, parent.func(split, it))
-        error("Not implemented yet")
+        pipelined_func = (split, it) -> func(split, parent.func(split, it))
+        command = serialized(pipelined_func)
+        jrdd = jcall(JJuliaRDD, "fromJavaRDD", JJuliaRDD,
+                     (JJavaRDD, Array{jbyte, 1}),
+                     parent.parent.jrdd, convert(Array{jbyte, 1}, command))
+        PipelinedRDD(parent.parent, pipelined_func, jrdd)
     end
 end
 
 
-function jrdd(rdd)
-
+function map_partitions_with_index(rdd::RDD, func::Function)
+    return PipelinedRDD(rdd, func)
 end
 
 
