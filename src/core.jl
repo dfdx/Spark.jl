@@ -1,5 +1,7 @@
 
-using Docile
+if VERSION < v"0.4"
+    using Docile
+end
 using JavaCall
 
 
