@@ -14,14 +14,18 @@ end
 
 
 function PipelinedRDD(parent::RDD, func::Function)
-    jrdd = if !isa(parent, PipelinedRDD)
+    if !isa(parent, PipelinedRDD)
         command = serialized(func)
         jrdd = jcall(JJuliaRDD, "fromJavaRDD", JJuliaRDD,
                      (JJavaRDD, Array{jbyte, 1}),
                      parent.jrdd, convert(Array{jbyte, 1}, command))
         PipelinedRDD(parent, func, jrdd)
     else
-        pipelined_func = (split, it) -> func(split, parent.func(split, it))
+        parent_func = parent.func
+        function pipelined_func(split, iterator)
+            return func(split, parent_func(split, iterator))
+        end
+        # pipelined_func = (split, it) -> func(split, parent.func(split, it))
         command = serialized(pipelined_func)
         jrdd = jcall(JJuliaRDD, "fromJavaRDD", JJuliaRDD,
                      (JJavaRDD, Array{jbyte, 1}),
@@ -40,3 +44,4 @@ function collect{T}(rdd::RDD, typ::Type{T}=Array{Array{jbyte,1},1})
     res = jcall(rdd.jrdd, "collect", JObject, ())
     return convert(T, res)
 end
+

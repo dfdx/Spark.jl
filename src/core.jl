@@ -20,5 +20,6 @@ function demo()
     sc = SparkContext()
     java_rdd = text_file(sc, "file:///var/log/syslog")
     rdd = PipelinedRDD(java_rdd, identity)
-    arr = collect(rdd)
+    rdd2 = PipelinedRDD(rdd, identity)
+    arr = collect(rdd2)
 end
