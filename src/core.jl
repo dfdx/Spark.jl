@@ -21,11 +21,16 @@ include("worker.jl")
     return take(it, 3)
 end
 
+@everywhere function take4(it)
+    return take(it, 4)
+end
+
 function demo()
     sc = SparkContext()
     java_rdd = text_file(sc, "file:///var/log/syslog")
-    rdd = PipelinedRDD(java_rdd, take3)
+    rdd = map_partitions_with_index(java_rdd, take3)
     arr = collect(rdd)
-    rdd2 = map_partitions_with_index(rdd, take3)
+    rdd2 = map_partitions(rdd, take4)
     arr2 = collect(rdd2)
 end
+

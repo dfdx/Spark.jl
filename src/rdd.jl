@@ -36,10 +36,15 @@ end
 
 
 function map_partitions_with_index(rdd::RDD, func::Function)
-    # TODO: add index on JuliaRDD side
     return PipelinedRDD(rdd, func)
 end
 
+function map_partitions(rdd::RDD, func::Function)
+    function mapper(idx, it)
+        func(it)
+    end
+    return PipelinedRDD(rdd, mapper)
+end
 
 function collect{T}(rdd::RDD, typ::Type{T}=Array{Array{jbyte,1},1})
     res = jcall(rdd.jrdd, "collect", JObject, ())
