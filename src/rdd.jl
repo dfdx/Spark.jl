@@ -36,6 +36,7 @@ end
 
 
 function map_partitions_with_index(rdd::RDD, func::Function)
+    # TODO: add index on JuliaRDD side
     return PipelinedRDD(rdd, func)
 end
 

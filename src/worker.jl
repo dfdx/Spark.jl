@@ -37,7 +37,7 @@ function load_stream(sock::TcpSocket)
 end
 
 
-function dump_stream(sock::TcpSocket, it::Task)
+function dump_stream(sock::TcpSocket, it)
     for v in it
         writeobj(sock, v)
     end
@@ -57,8 +57,7 @@ function launch_worker()
         # we need to get iterator to apply function to it,
         # but actually data is loaded actively (both ways)
         it = load_stream(sock)
-        func = identity
-        dump_stream(sock, func(it))        
+        dump_stream(sock, func(part_id, it))        
         writeint(sock, END_OF_DATA_SECTION)
         writeint(sock, END_OF_STREAM)
         info("Julia: Exiting")
