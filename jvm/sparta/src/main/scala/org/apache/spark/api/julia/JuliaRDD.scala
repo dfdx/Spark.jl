@@ -181,7 +181,7 @@ object JuliaRDD extends Logging {
       serverSocket = new ServerSocket(0, 1, InetAddress.getByAddress(Array(127, 0, 0, 1).map(_.toByte)))
 
       // Create and start the worker
-      val pb = new ProcessBuilder(Seq("julia", "-e", "using Sparta; Sparta.launch_worker()"))
+      val pb = new ProcessBuilder(Seq("julia", "-e", "using Sparta; using Iterators; Sparta.launch_worker()"))
       // val workerEnv = pb.environment()
       // workerEnv.putAll(envVars)
       val worker = pb.start()

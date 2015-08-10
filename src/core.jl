@@ -25,12 +25,19 @@ end
     return take(it, 4)
 end
 
+@everywhere function first5(arr)
+    return arr[1:5]
+end
+
+
 function demo()
     sc = SparkContext()
     java_rdd = text_file(sc, "file:///var/log/syslog")
     rdd = map_partitions_with_index(java_rdd, take3)
     arr = collect(rdd)
-    rdd2 = map_partitions(rdd, take4)
-    arr2 = collect(rdd2)
+    rdd = map_partitions(rdd, take4)
+    arr = collect(rdd)
+    rdd = map(rdd, first5)
+    arr = collect(rdd)
 end
 

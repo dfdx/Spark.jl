@@ -1,9 +1,7 @@
 
 function init()
     envcp = get(ENV, "CLASSPATH", "")
-    spartaassembly = Pkg.dir("Sparta", "jvm", "sparta", "target", "sparta-0.1-assembly.jar")    
-    # spartajar = Pkg.dir("Sparta", "jvm", "sparta", "target", "sparta-0.1.jar")
-    # sparkjar = Pkg.dir("Sparta", "lib", "spark.jar")
+    spartaassembly = Pkg.dir("Sparta", "jvm", "sparta", "target", "sparta-0.1-assembly.jar")        
     classpath = "$envcp:$spartaassembly"
     try
         # prevent exceptions in REPL on code reloading

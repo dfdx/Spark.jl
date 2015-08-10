@@ -1,5 +1,6 @@
 
 import Base.TcpSocket
+using Iterators
 
 const END_OF_DATA_SECTION = -1
 const JULIA_EXCEPTION_THROWN = -2
