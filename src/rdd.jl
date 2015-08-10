@@ -35,10 +35,23 @@ function PipelinedRDD(parent::RDD, func::Function)
 end
 
 
-function map_partitions_with_index(rdd::RDD, func::Function)
+function map_partitions_with_index(rdd::RDD, f::Function)
+    return PipelinedRDD(rdd, f)
+end
+
+function map_partitions(rdd::RDD, f::Function)
+    function func(idx, it)
+        f(it)
+    end
     return PipelinedRDD(rdd, func)
 end
 
+function Base.map(rdd::RDD, f::Function)
+    function func(idx, it)
+        imap(f, it)
+    end
+    return PipelinedRDD(rdd, func)
+end
 
 function collect{T}(rdd::RDD, typ::Type{T}=Array{Array{jbyte,1},1})
     res = jcall(rdd.jrdd, "collect", JObject, ())
