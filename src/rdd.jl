@@ -46,12 +46,20 @@ function map_partitions(rdd::RDD, f::Function)
     return PipelinedRDD(rdd, func)
 end
 
-function Base.map(rdd::RDD, f::Function)
+function map(rdd::RDD, f::Function)
     function func(idx, it)
         imap(f, it)
     end
     return PipelinedRDD(rdd, func)
 end
+
+function reduce(rdd::RDD, f::Function)
+    # TODO: not tested, not verified for correctness
+    # should probably wait until at least strings are supported
+    subresults = collect(map_partitions(rdd, f))
+    return reduce(f, subresults)
+end
+
 
 function collect{T}(rdd::RDD, typ::Type{T}=Array{Array{jbyte,1},1})
     res = jcall(rdd.jrdd, "collect", JObject, ())
