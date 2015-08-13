@@ -32,6 +32,7 @@ end
 
 @everywhere function concat(a1, a2)
     # TODO: should take and produce iterator
+    # TODO: finish it when at least strings are supported
     return [a1, a2]
 end
 
@@ -39,10 +40,7 @@ function demo()
     sc = SparkContext()
     java_rdd = text_file(sc, "file:///var/log/syslog")
     rdd = map_partitions_with_index(java_rdd, take3)
-    # arr = collect(rdd)
-    rdd = map_partitions(rdd, take4)
-    # arr = collect(rdd)
-    rdd = map(rdd, first5)
-    arr = reduce(rdd, concat)
+    arr = collect(rdd)
+    close(sc)
 end
 
