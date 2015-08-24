@@ -40,7 +40,7 @@ function demo()
     sc = SparkContext()
     java_rdd = text_file(sc, "file:///var/log/syslog")
     rdd = map_partitions_with_index(java_rdd, take3)
-    arr = collect(rdd)
+    # arr = collect(rdd)
     close(sc)
 end
 
