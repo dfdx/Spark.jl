@@ -61,8 +61,8 @@ function reduce(rdd::RDD, f::Function)
 end
 
 
-function collect{T}(rdd::RDD, typ::Type{T}=Array{Array{jbyte,1},1})
-    res = jcall(rdd.jrdd, "collect", JObject, ())
+function collect{T}(rdd::RDD, typ::Type{T}=JString)
+    res = jcall(rdd.jrdd, "collect", JString, ())
     return convert(T, res)
 end
 

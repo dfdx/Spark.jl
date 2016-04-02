@@ -1,5 +1,5 @@
 
-import Base.TcpSocket
+import Base.TCPSocket
 using Iterators
 
 const END_OF_DATA_SECTION = -1
@@ -8,25 +8,25 @@ const TIMING_DATA = -3
 const END_OF_STREAM = -4
 const NULL = -5
 
-readint(sock::TcpSocket) = ntoh(read(sock, Int32))
+readint(sock::TCPSocket) = ntoh(read(sock, Int32))
 
-function readobj(sock::TcpSocket)
+function readobj(sock::TCPSocket)
     len = readint(sock)
     bytes = len > 0 ? readbytes(sock, len) : []
     return len, bytes
 end
 
-writeint(sock::TcpSocket, x::Int) = write(sock, hton(int32(x)))
+writeint(sock::TCPSocket, x::Int) = write(sock, hton(Int32(x)))
 
-function writeobj(sock::TcpSocket, obj::Vector{Uint8})
+function writeobj(sock::TCPSocket, obj::Vector{UInt8})
     writeint(sock, length(obj))
     write(sock, obj)
 end
 
-writeobj(sock::TcpSocket, obj) = writeobj(sock, convert(Vector{Uint8}, obj))
+writeobj(sock::TCPSocket, obj) = writeobj(sock, convert(Vector{UInt8}, obj))
 
 
-function load_stream(sock::TcpSocket)
+function load_stream(sock::TCPSocket)
     function it()
         code, _next = readobj(sock)
         while code != END_OF_DATA_SECTION
@@ -38,7 +38,7 @@ function load_stream(sock::TcpSocket)
 end
 
 
-function dump_stream(sock::TcpSocket, it)
+function dump_stream(sock::TCPSocket, it)
     for v in it
         writeobj(sock, v)
     end
@@ -46,7 +46,7 @@ end
 
 
 function launch_worker()
-    port = int(readline(STDIN))
+    port = Int(readline(STDIN))
     info("Julia: Connecting to port $(port)!")
     sock = connect("127.0.0.1", port)
     try

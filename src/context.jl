@@ -4,7 +4,8 @@ type SparkContext
 end
 
 
-function SparkContext(master::String="local", appname::String="This is Sparta!")
+function SparkContext(master::AbstractString="local",
+                      appname::AbstractString="Julia App on Spark")
     SparkContext(JJavaSparkContext((JString, JString), master, appname))
 end
 
@@ -13,8 +14,7 @@ function close(sc::SparkContext)
 end
 
 
-function text_file(sc::SparkContext, path::String)
-    jrdd = jcall(sc.jsc, "textFile", JJavaRDD, (JString,), path)    
+function text_file(sc::SparkContext, path::AbstractString)
+    jrdd = jcall(sc.jsc, "textFile", JJavaRDD, (JString,), path)
     JavaRDD(jrdd)
 end
-
