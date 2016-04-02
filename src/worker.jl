@@ -46,28 +46,27 @@ end
 
 
 function launch_worker()
-    port = Int(readline(STDIN))
+    port = parse(Int, readline(STDIN))
     info("Julia: Connecting to port $(port)!")
     sock = connect("127.0.0.1", port)
     try
         part_id = readint(sock)
         info("Julia: partition id = $part_id")
         cmd = readobj(sock)[2]
-        print("Julia: command = $cmd")
+        info("Julia: trying to deserialize command")
         func = deserialize(IOBuffer(cmd))
+        info("Julia: deserialized comand into function: $func")
         # we need to get iterator to apply function to it,
         # but actually data is loaded actively (both ways)
         it = load_stream(sock)
-        dump_stream(sock, func(part_id, it))        
+        dump_stream(sock, func(part_id, it))
         writeint(sock, END_OF_DATA_SECTION)
         writeint(sock, END_OF_STREAM)
         info("Julia: Exiting")
     catch e
         # TODO: handle the case when JVM closes connection
-        Base.show_backtrace(STDERR, catch_backtrace())        
+        Base.show_backtrace(STDERR, catch_backtrace())
         writeint(sock, JULIA_EXCEPTION_THROWN)
         rethrow()
     end
 end
-
-

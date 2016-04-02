@@ -13,12 +13,20 @@ type PipelinedRDD <: RDD
 end
 
 
+Base.reinterpret(::Type{Array{jbyte,1}}, bytes::Array{UInt8,1}) =
+    jbyte[reinterpret(jbyte, b) for b in bytes]
+
+Base.reinterpret(::Type{Array{UInt8,1}}, bytes::Array{jbyte,1}) =
+    UInt8[reinterpret(UInt8, b) for b in bytes]
+
+
 function PipelinedRDD(parent::RDD, func::Function)
     if !isa(parent, PipelinedRDD)
         command = serialized(func)
         jrdd = jcall(JJuliaRDD, "fromJavaRDD", JJuliaRDD,
                      (JJavaRDD, Array{jbyte, 1}),
-                     parent.jrdd, convert(Array{jbyte, 1}, command))
+                     parent.jrdd, reinterpret(Vector{jbyte}, command))
+                     # parent.jrdd, convert(Array{jbyte, 1}, command))
         PipelinedRDD(parent, func, jrdd)
     else
         parent_func = parent.func
@@ -29,7 +37,7 @@ function PipelinedRDD(parent::RDD, func::Function)
         command = serialized(pipelined_func)
         jrdd = jcall(JJuliaRDD, "fromJavaRDD", JJuliaRDD,
                      (JJavaRDD, Array{jbyte, 1}),
-                     parent.parent.jrdd, convert(Array{jbyte, 1}, command))
+                     parent.parent.jrdd, reinterpret(Vector{jbyte}, command))
         PipelinedRDD(parent.parent, pipelined_func, jrdd)
     end
 end
@@ -61,8 +69,16 @@ function reduce(rdd::RDD, f::Function)
 end
 
 
-function collect{T}(rdd::RDD, typ::Type{T}=JString)
-    res = jcall(rdd.jrdd, "collect", JString, ())
-    return convert(T, res)
+# TODO: make RDD{T}?
+function collect{T}(rdd::RDD, ::Type{T}=Vector{UInt8})
+    jobj = jcall(rdd.jrdd, "collect", JObject, ())
+    jbyte_arrs = convert(Vector{Vector{jbyte}}, jobj)
+    byte_arrs = Vector{UInt8}[reinterpret(Vector{UInt8}, arr) for arr in jbyte_arrs]
+    vals = [decode(T, arr) for arr in byte_arrs]
+    return vals
 end
 
+
+function count(rdd::RDD)
+    return jcall(rdd.jrdd, "count", jlong, ())    
+end
