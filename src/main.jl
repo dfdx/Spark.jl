@@ -14,7 +14,7 @@ end
 function main()
     sc = SparkContext()
     rdd = text_file(sc, "file:///var/log/syslog")
-    rdd = map_partitions_with_index(rdd, (split, it) -> (println("SPLIT #$split"); it))
+    # rdd = map_partitions_with_index(rdd, (split, it) -> map(length, it))
     count(rdd)
     close(sc)
 end

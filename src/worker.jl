@@ -10,6 +10,7 @@ const NULL = -5
 
 readint(sock::TCPSocket) = ntoh(read(sock, Int32))
 
+"""Read length and byte array of that length from a socket"""
 function readobj(sock::TCPSocket)
     len = readint(sock)
     bytes = len > 0 ? readbytes(sock, len) : []
@@ -18,12 +19,25 @@ end
 
 writeint(sock::TCPSocket, x::Int) = write(sock, hton(Int32(x)))
 
+"""Write length and byte array of that length to a socket"""
 function writeobj(sock::TCPSocket, obj::Vector{UInt8})
     writeint(sock, length(obj))
     write(sock, obj)
 end
 
 writeobj(sock::TCPSocket, obj) = writeobj(sock, convert(Vector{UInt8}, obj))
+
+
+# function writething(sock::TCPSocket, thing)
+#     len = sizeof(thing)
+#     writeint(sock, len)
+#     write(sock, thing)
+# end
+
+# function readthing(sock::TCPSocket, ::Type{T}=Vector{UInt8})
+#     len = readint(sock)
+#     bytes = len > 0 ? read(sock, T) : []
+# end
 
 
 function load_stream(sock::TCPSocket)
@@ -50,8 +64,8 @@ function launch_worker()
     info("Julia: Connecting to port $(port)!")
     sock = connect("127.0.0.1", port)
     try
-        part_id = readint(sock)
-        info("Julia: partition id = $part_id")
+        split = readint(sock)
+        info("Julia: partition id = $split")
         cmd = readobj(sock)[2]
         info("Julia: trying to deserialize command")
         func = deserialize(IOBuffer(cmd))
@@ -59,7 +73,7 @@ function launch_worker()
         # we need to get iterator to apply function to it,
         # but actually data is loaded actively (both ways)
         it = load_stream(sock)
-        dump_stream(sock, func(part_id, it))
+        dump_stream(sock, func(split, it))
         writeint(sock, END_OF_DATA_SECTION)
         writeint(sock, END_OF_STREAM)
         info("Julia: Exiting")
