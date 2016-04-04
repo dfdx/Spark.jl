@@ -14,7 +14,8 @@ import scala.language.existentials
 
 class JuliaRDD(
     @transient parent: RDD[_],
-    command: Array[Byte]
+    command: Array[Byte],
+    inputType: Array[Byte]
 ) extends RDD[Array[Byte]](parent) {
 
   val preservePartitioning = true
@@ -129,6 +130,9 @@ class JuliaRDD(
         // partition index
         dataOut.writeInt(split.index)
         dataOut.flush()
+        // input type
+        dataOut.write(inputType)
+        dataOut.flush()
         // serialized command:
         dataOut.writeInt(command.length)
         dataOut.write(command)
@@ -173,7 +177,8 @@ private object SpecialLengths {
 
 object JuliaRDD extends Logging {
 
-  def fromJavaRDD[T](javaRdd: JavaRDD[T], command: Array[Byte]): JuliaRDD = new JuliaRDD(JavaRDD.toRDD(javaRdd), command)
+  def fromJavaRDD[T](javaRdd: JavaRDD[T], command: Array[Byte], inputType: Array[Byte]): JuliaRDD =
+    new JuliaRDD(JavaRDD.toRDD(javaRdd), command, inputType)
 
   def createWorker(): Socket = {
     var serverSocket: ServerSocket = null

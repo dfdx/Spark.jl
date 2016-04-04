@@ -10,7 +10,11 @@ const NULL = -5
 
 readint(sock::TCPSocket) = ntoh(read(sock, Int32))
 
-"""Read length and byte array of that length from a socket"""
+"""
+Read data object from a socket. Returns code and byte array:
+ * if code is negative, it's considered as a special command code
+ * if code is positive, it's considered as array length
+"""
 function readobj(sock::TCPSocket)
     len = readint(sock)
     bytes = len > 0 ? readbytes(sock, len) : []
@@ -28,23 +32,14 @@ end
 writeobj(sock::TCPSocket, obj) = writeobj(sock, convert(Vector{UInt8}, obj))
 
 
-# function writething(sock::TCPSocket, thing)
-#     len = sizeof(thing)
-#     writeint(sock, len)
-#     write(sock, thing)
-# end
 
-# function readthing(sock::TCPSocket, ::Type{T}=Vector{UInt8})
-#     len = readint(sock)
-#     bytes = len > 0 ? read(sock, T) : []
-# end
-
-
-function load_stream(sock::TCPSocket)
+function load_stream{T}(::Type{T}, sock::TCPSocket)
     function it()
         code, _next = readobj(sock)
         while code != END_OF_DATA_SECTION
-            produce(_next)
+            data = from_bytes(T, _next)
+            println("!!!!!!!!!DATUM = $data")
+            produce(data)
             code, _next = readobj(sock)
         end
     end
@@ -54,7 +49,7 @@ end
 
 function dump_stream(sock::TCPSocket, it)
     for v in it
-        writeobj(sock, v)
+        writeobj(sock, to_bytes(v))
     end
 end
 
@@ -66,13 +61,15 @@ function launch_worker()
     try
         split = readint(sock)
         info("Julia: partition id = $split")
+        T = deserialize(sock)
+        info("Julia: type of input RDD = $T")
         cmd = readobj(sock)[2]
         info("Julia: trying to deserialize command")
         func = deserialize(IOBuffer(cmd))
         info("Julia: deserialized comand into function: $func")
         # we need to get iterator to apply function to it,
         # but actually data is loaded actively (both ways)
-        it = load_stream(sock)
+        it = load_stream(T, sock)
         dump_stream(sock, func(split, it))
         writeint(sock, END_OF_DATA_SECTION)
         writeint(sock, END_OF_STREAM)

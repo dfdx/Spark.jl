@@ -16,7 +16,7 @@ end
 
 function text_file(sc::SparkContext, path::AbstractString)
     jrdd = jcall(sc.jsc, "textFile", JJavaRDD, (JString,), path)
-    java_rdd = JavaRDD(jrdd)
+    java_rdd = JavaRDD(jrdd, UTF8String)
     # turns out JavaRDD doesn't contain some methods, so we immediately wrap it
     # into a JuliaRDD/PipelinedRDD
     return PipelinedRDD(java_rdd, (prt, it) -> it)

@@ -11,7 +11,6 @@ JJuliaRDD = @jimport org.apache.spark.api.julia.JuliaRDD
 
 include("init.jl")
 include("serialization.jl")
-include("decoders.jl")
 include("context.jl")
 include("rdd.jl")
 include("worker.jl")
