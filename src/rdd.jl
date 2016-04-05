@@ -4,7 +4,7 @@ abstract RDD
 "Pure wrapper around JavaRDD"
 type JavaRDD <: RDD
     jrdd::JJavaRDD
-    eltyp::DataType
+    meta::Dict{Symbol,Any}
 end
 
 """
@@ -14,25 +14,29 @@ type PipelinedRDD <: RDD
     parentrdd::RDD
     func::Function
     jrdd::JJuliaRDD
-    eltyp::DataType
-end
-
-"Pseudo-RDD, think of `nothing` inherited from RDD"
-immutable NotRDD <: RDD
-end
-
-NOT_RDD = NotRDD()
-
-"Special type to indicate that type of RDD elements is not known"
-immutable Unknown
+    meta::Dict{Symbol,Any}
 end
 
 
-Base.eltype(rdd::RDD) = rdd.eltyp
+Base.eltype(rdd::RDD) = get(rdd.meta, :eltyp, nothing)
 Base.parent(rdd::PipelinedRDD) = rdd.parentrdd
-Base.parent(rdd::RDD) = NOT_RDD
+Base.parent(rdd::RDD) = nothing
 
-assigntype!{T}(rdd::RDD, ::Type{T}) = (rdd.eltyp = T)
+
+# TODO: assigntype! -> typehint!
+# TODO: infer type from the 1st element of RDD (in worker.jl? first(rdd)?)
+assigntype!{T}(rdd::RDD, ::Type{T}) = (rdd.meta[:eltyp] = T)
+
+
+function source_eltype(nextrdd::Union{RDD, Void})
+    if nextrdd == nothing
+        return nothing
+    elseif haskey(nextrdd.meta, :source_eltyp)
+        return nextrdd.meta[:source_eltyp]
+    else
+        return source_eltype(parent(nextrdd))
+    end
+end
 
 
 Base.reinterpret(::Type{Array{jbyte,1}}, bytes::Array{UInt8,1}) =
@@ -42,32 +46,27 @@ Base.reinterpret(::Type{Array{UInt8,1}}, bytes::Array{jbyte,1}) =
     UInt8[reinterpret(UInt8, b) for b in bytes]
 
 
-function latest_known_eltype(eltyp::DataType, nextrdd::RDD)
-    if eltyp != Unknown
-        return eltyp
-    elseif nextrdd == NOT_RDD
-        return Unknown
-    else
-        println("!!!eltyp = $eltyp, parent(nextrdd) = $(parent(nextrdd))")
-        return latest_known_eltype(eltype(nextrdd), parent(nextrdd))
-    end
-end
-
 """
 Params:
  * parentrdd - parent RDD
  * func - function of type `(split, iterator) -> iterator` to apply to each partition
- * eltyp - type of RDD elements, optional
+ * source_eltype - type of RDD elements, optional
 """
-function PipelinedRDD(parentrdd::RDD, func::Function, eltyp::DataType=Unknown)
-    latest_known_eltyp = latest_known_eltype(eltyp, parentrdd)
-    latest_known_eltyp_ser = reinterpret(Vector{jbyte}, serialized(latest_known_eltyp))
+function PipelinedRDD(parentrdd::RDD, func::Function,
+                      source_eltyp::Union{DataType, Void}=nothing)
+    meta = Dict{Symbol,Any}()
+    if source_eltyp != nothing
+        meta[:source_eltyp] = source_eltyp
+    else
+        source_eltyp = source_eltype(parentrdd)
+    end
+    source_eltyp_ser = reinterpret(Vector{jbyte}, serialized(source_eltyp))
     if !isa(parentrdd, PipelinedRDD)
         command_ser = reinterpret(Vector{jbyte}, serialized(func))
         jrdd = jcall(JJuliaRDD, "fromJavaRDD", JJuliaRDD,
                      (JJavaRDD, Vector{jbyte}, Vector{jbyte}),
-                     parentrdd.jrdd, command_ser, latest_known_eltyp_ser)
-        PipelinedRDD(parentrdd, func, jrdd, Unknown)
+                     parentrdd.jrdd, command_ser, source_eltyp_ser)
+        PipelinedRDD(parentrdd, func, jrdd, meta)
     else
         parent_func = parentrdd.func
         function pipelined_func(split, iterator)
@@ -76,8 +75,8 @@ function PipelinedRDD(parentrdd::RDD, func::Function, eltyp::DataType=Unknown)
         command_ser = reinterpret(Vector{jbyte}, serialized(pipelined_func))
         jrdd = jcall(JJuliaRDD, "fromJavaRDD", JJuliaRDD,
                      (JJavaRDD, Vector{jbyte}, Vector{jbyte}),
-                     parent(parentrdd).jrdd, command_ser, latest_known_eltyp_ser)
-        PipelinedRDD(parent(parentrdd), pipelined_func, jrdd, Unknown)
+                     parent(parentrdd).jrdd, command_ser, source_eltyp_ser)
+        PipelinedRDD(parent(parentrdd), pipelined_func, jrdd, meta)
     end
 end
 
@@ -101,20 +100,24 @@ function map(rdd::RDD, f::Function)
 end
 
 function reduce(rdd::RDD, f::Function)
-    # TODO: not tested, not verified for correctness
-    # should probably wait until at least strings are supported
-    subresults = collect(map_partitions(rdd, f))
+    locally_reduced = map_partitions(rdd, it -> reduce(f, it))
+    subresults = collect(locally_reduced, eltype(rdd))
     return reduce(f, subresults)
 end
 
 
-function collect{T}(rdd::RDD, ::Type{T}=eltype(rdd))
-    ET = T != Unknown ? T : Vector{UInt8}
+function collect{T}(rdd::RDD, ::Type{T})
     jobj = jcall(rdd.jrdd, "collect", JObject, ())
     jbyte_arrs = convert(Vector{Vector{jbyte}}, jobj)
     byte_arrs = Vector{UInt8}[reinterpret(Vector{UInt8}, arr) for arr in jbyte_arrs]
-    vals = [from_bytes(ET, arr) for arr in byte_arrs]
+    vals = [from_bytes(T, arr) for arr in byte_arrs]
     return vals
+end
+
+function collect(rdd::RDD)
+    T = eltype(rdd)
+    ET = T != nothing ? T : Vector{UInt8}
+    return collect(rdd, ET)
 end
 
 

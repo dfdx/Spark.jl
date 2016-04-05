@@ -8,3 +8,4 @@ project/
 *.jar
 .juliahistory
 *.iml
+*.log

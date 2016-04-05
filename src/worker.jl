@@ -38,7 +38,6 @@ function load_stream{T}(::Type{T}, sock::TCPSocket)
         code, _next = readobj(sock)
         while code != END_OF_DATA_SECTION
             data = from_bytes(T, _next)
-            println("!!!!!!!!!DATUM = $data")
             produce(data)
             code, _next = readobj(sock)
         end
@@ -55,25 +54,21 @@ end
 
 
 function launch_worker()
-    port = parse(Int, readline(STDIN))
-    info("Julia: Connecting to port $(port)!")
+    port = parse(Int, readline(STDIN))    
     sock = connect("127.0.0.1", port)
     try
         split = readint(sock)
-        info("Julia: partition id = $split")
+        info("Julia: starting partition id: $split")
         T = deserialize(sock)
-        info("Julia: type of input RDD = $T")
         cmd = readobj(sock)[2]
-        info("Julia: trying to deserialize command")
         func = deserialize(IOBuffer(cmd))
-        info("Julia: deserialized comand into function: $func")
         # we need to get iterator to apply function to it,
         # but actually data is loaded actively (both ways)
         it = load_stream(T, sock)
         dump_stream(sock, func(split, it))
         writeint(sock, END_OF_DATA_SECTION)
         writeint(sock, END_OF_STREAM)
-        info("Julia: Exiting")
+        info("Julia: exiting")
     catch e
         # TODO: handle the case when JVM closes connection
         Base.show_backtrace(STDERR, catch_backtrace())

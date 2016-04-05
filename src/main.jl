@@ -14,14 +14,11 @@ end
 function main()
     sc = SparkContext()
     path = "file:///var/log/syslog"
-    rdd = text_file(sc, path)
-    assigntype!(rdd, UTF8String)  # TODO: add separate source type (for decoding from Java)
-                                  # TODO: move both to a `meta::Dict{Symbol,Any}` field
+    txt = text_file(sc, path)
+    assigntype!(txt, UTF8String)
+    rdd = map_partitions_with_index(txt, (prt, it) -> map(s -> length(split(s)), it))
+    assigntype!(rdd, Int)
     collect(rdd)
-    
-    rdd = map_partitions_with_index(rdd, (split, it) -> map(length, it))
     count(rdd)
     close(sc)
 end
-
-
