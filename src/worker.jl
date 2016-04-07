@@ -34,10 +34,10 @@ writeobj(sock::TCPSocket, obj) = writeobj(sock, convert(Vector{UInt8}, obj))
 
 
 function load_stream{T}(::Type{T}, sock::TCPSocket)
-    function it()
+    function it()        
         code, _next = readobj(sock)
         while code != END_OF_DATA_SECTION
-            data = from_bytes(T, _next)
+            data = from_bytes(T, _next)            
             produce(data)
             code, _next = readobj(sock)
         end
@@ -61,9 +61,7 @@ function launch_worker()
         info("Julia: starting partition id: $split")
         T = deserialize(sock)
         cmd = readobj(sock)[2]
-        func = deserialize(IOBuffer(cmd))
-        # we need to get iterator to apply function to it,
-        # but actually data is loaded actively (both ways)
+        func = deserialize(IOBuffer(cmd))        
         it = load_stream(T, sock)
         dump_stream(sock, func(split, it))
         writeint(sock, END_OF_DATA_SECTION)

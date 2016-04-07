@@ -1,5 +1,5 @@
 
-# Julia-only serialization. Use it for technical data (e.g. functions, codes, etc.)
+## 1. Julia-only serialization. Use it for technical data (e.g. functions, codes, etc.)
 
 "Return serialized object as an array of bytes"
 function serialized(x)
@@ -14,7 +14,7 @@ function deserialized(x::Vector{UInt8})
 end
 
 
-# Java-compatible serialization. Use it for data
+## Java-compatible serialization. Use it for data
 
 from_bytes(::Type{Vector{UInt8}}, arr::Vector{UInt8}) = arr
 from_bytes(::Type{UTF8String}, arr::Vector{UInt8}) = utf8(arr)
@@ -31,3 +31,5 @@ to_bytes{I<:Integer}(x::I) = begin
     write(io, hton(x))
     io.data
 end
+
+to_bytes(x) = serialized(x)  # generic serialization for Julia objects

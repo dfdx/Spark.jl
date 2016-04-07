@@ -29,6 +29,7 @@ class JuliaRDD(
     if (preservePartitioning) firstParent.partitioner else None
   }
 
+
   override def compute(split: Partition, context: TaskContext): Iterator[Array[Byte]] = {
     val env = SparkEnv.get
     val worker: Socket = JuliaRDD.createWorker()
@@ -233,14 +234,16 @@ object JuliaRDD extends Logging {
 
   def writeIteratorToStream[T](iter: Iterator[T], dataOut: DataOutputStream) {
 
-    def write(obj: Any): Unit = obj match {
-      case arr: Array[Byte] =>
-        dataOut.writeInt(arr.length)
-        dataOut.write(arr)
-      case str: String =>
-        writeUTF(str, dataOut)
-      case other =>
-        throw new SparkException("Unexpected element type " + other.getClass)
+    def write(obj: Any): Unit = {
+      obj match {
+        case arr: Array[Byte] =>
+          dataOut.writeInt(arr.length)
+          dataOut.write(arr)
+        case str: String =>
+          writeUTF(str, dataOut)
+        case other =>
+          throw new SparkException("Unexpected element type " + other.getClass)
+      }
     }
 
     iter.foreach(write)

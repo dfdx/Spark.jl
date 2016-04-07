@@ -18,21 +18,39 @@ type PipelinedRDD <: RDD
 end
 
 
-Base.eltype(rdd::RDD) = get(rdd.meta, :eltyp, nothing)
+function probe_type(rdd::RDD)
+    type_rdd = map(rdd, typeof)
+    jobj = jcall(type_rdd.jrdd, "first", JObject, ())
+    jbytes = convert(Vector{jbyte}, jobj)
+    bytes = reinterpret(Vector{UInt8}, jbytes)
+    typ = deserialized(bytes)    
+    return typ
+end
+
+
+function Base.eltype(rdd::RDD)
+    if haskey(rdd.meta, :typ)
+        return rdd.meta[:typ] # get from cache
+    else
+        typ = probe_type(rdd)
+        rdd.meta[:typ] = typ
+        return typ
+    end
+
+end
+
 Base.parent(rdd::PipelinedRDD) = rdd.parentrdd
 Base.parent(rdd::RDD) = nothing
 
 
-# TODO: assigntype! -> typehint!
-# TODO: infer type from the 1st element of RDD (in worker.jl? first(rdd)?)
-assigntype!{T}(rdd::RDD, ::Type{T}) = (rdd.meta[:eltyp] = T)
+typehint!{T}(rdd::RDD, ::Type{T}) = (rdd.meta[:typ] = T)
 
 
 function source_eltype(nextrdd::Union{RDD, Void})
     if nextrdd == nothing
         return nothing
-    elseif haskey(nextrdd.meta, :source_eltyp)
-        return nextrdd.meta[:source_eltyp]
+    elseif haskey(nextrdd.meta, :styp)
+        return nextrdd.meta[:styp]
     else
         return source_eltype(parent(nextrdd))
     end
@@ -49,23 +67,23 @@ Base.reinterpret(::Type{Array{UInt8,1}}, bytes::Array{jbyte,1}) =
 """
 Params:
  * parentrdd - parent RDD
- * func - function of type `(split, iterator) -> iterator` to apply to each partition
- * source_eltype - type of RDD elements, optional
+ * func - function of type `(index, iterator) -> iterator` to apply to each partition
+ * stype - type of source elements for this RDD, optional
 """
 function PipelinedRDD(parentrdd::RDD, func::Function,
-                      source_eltyp::Union{DataType, Void}=nothing)
+                      styp::Union{DataType, Void}=nothing)
     meta = Dict{Symbol,Any}()
-    if source_eltyp != nothing
-        meta[:source_eltyp] = source_eltyp
+    if styp != nothing
+        meta[:styp] = styp
     else
-        source_eltyp = source_eltype(parentrdd)
+        styp = source_eltype(parentrdd)
     end
-    source_eltyp_ser = reinterpret(Vector{jbyte}, serialized(source_eltyp))
+    styp_ser = reinterpret(Vector{jbyte}, serialized(styp))
     if !isa(parentrdd, PipelinedRDD)
         command_ser = reinterpret(Vector{jbyte}, serialized(func))
         jrdd = jcall(JJuliaRDD, "fromJavaRDD", JJuliaRDD,
                      (JJavaRDD, Vector{jbyte}, Vector{jbyte}),
-                     parentrdd.jrdd, command_ser, source_eltyp_ser)
+                     parentrdd.jrdd, command_ser, styp_ser)
         PipelinedRDD(parentrdd, func, jrdd, meta)
     else
         parent_func = parentrdd.func
@@ -75,7 +93,7 @@ function PipelinedRDD(parentrdd::RDD, func::Function,
         command_ser = reinterpret(Vector{jbyte}, serialized(pipelined_func))
         jrdd = jcall(JJuliaRDD, "fromJavaRDD", JJuliaRDD,
                      (JJavaRDD, Vector{jbyte}, Vector{jbyte}),
-                     parent(parentrdd).jrdd, command_ser, source_eltyp_ser)
+                     parent(parentrdd).jrdd, command_ser, styp_ser)
         PipelinedRDD(parent(parentrdd), pipelined_func, jrdd, meta)
     end
 end
@@ -113,6 +131,7 @@ function collect{T}(rdd::RDD, ::Type{T})
     vals = [from_bytes(T, arr) for arr in byte_arrs]
     return vals
 end
+
 
 function collect(rdd::RDD)
     T = eltype(rdd)
