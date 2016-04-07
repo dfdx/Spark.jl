@@ -14,7 +14,8 @@ import scala.language.existentials
 
 class JuliaRDD(
     @transient parent: RDD[_],
-    command: Array[Byte]
+    command: Array[Byte],
+    inputType: Array[Byte]
 ) extends RDD[Array[Byte]](parent) {
 
   val preservePartitioning = true
@@ -27,6 +28,7 @@ class JuliaRDD(
   override val partitioner: Option[Partitioner] = {
     if (preservePartitioning) firstParent.partitioner else None
   }
+
 
   override def compute(split: Partition, context: TaskContext): Iterator[Array[Byte]] = {
     val env = SparkEnv.get
@@ -129,6 +131,9 @@ class JuliaRDD(
         // partition index
         dataOut.writeInt(split.index)
         dataOut.flush()
+        // input type
+        dataOut.write(inputType)
+        dataOut.flush()
         // serialized command:
         dataOut.writeInt(command.length)
         dataOut.write(command)
@@ -173,7 +178,8 @@ private object SpecialLengths {
 
 object JuliaRDD extends Logging {
 
-  def fromJavaRDD[T](javaRdd: JavaRDD[T], command: Array[Byte]): JuliaRDD = new JuliaRDD(JavaRDD.toRDD(javaRdd), command)
+  def fromJavaRDD[T](javaRdd: JavaRDD[T], command: Array[Byte], inputType: Array[Byte]): JuliaRDD =
+    new JuliaRDD(JavaRDD.toRDD(javaRdd), command, inputType)
 
   def createWorker(): Socket = {
     var serverSocket: ServerSocket = null
@@ -228,14 +234,16 @@ object JuliaRDD extends Logging {
 
   def writeIteratorToStream[T](iter: Iterator[T], dataOut: DataOutputStream) {
 
-    def write(obj: Any): Unit = obj match {
-      case arr: Array[Byte] =>
-        dataOut.writeInt(arr.length)
-        dataOut.write(arr)
-      case str: String =>
-        writeUTF(str, dataOut)
-      case other =>
-        throw new SparkException("Unexpected element type " + other.getClass)
+    def write(obj: Any): Unit = {
+      obj match {
+        case arr: Array[Byte] =>
+          dataOut.writeInt(arr.length)
+          dataOut.write(arr)
+        case str: String =>
+          writeUTF(str, dataOut)
+        case other =>
+          throw new SparkException("Unexpected element type " + other.getClass)
+      }
     }
 
     iter.foreach(write)
