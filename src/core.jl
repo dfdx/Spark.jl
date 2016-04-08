@@ -1,8 +1,7 @@
 
-using Docile
 using JavaCall
 using Iterators
-import Base: map, reduce
+import Base: map, reduce, count, collect, close
 
 JJavaSparkContext = @jimport org.apache.spark.api.java.JavaSparkContext
 JJavaRDD = @jimport org.apache.spark.api.java.JavaRDD

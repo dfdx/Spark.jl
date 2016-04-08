@@ -159,9 +159,11 @@ class JuliaRDD(
           }
       } finally {
         // Release memory used by this thread for shuffles
-        env.shuffleMemoryManager.releaseMemoryForThisThread()
+        // env.shuffleMemoryManager.releaseMemoryForThisThread()
+        env.shuffleMemoryManager.releaseMemoryForThisTask()
         // Release memory used by this thread for unrolling blocks
-        env.blockManager.memoryStore.releaseUnrollMemoryForThisThread()
+        // env.blockManager.memoryStore.releaseUnrollMemoryForThisThread()
+        env.blockManager.memoryStore.releaseUnrollMemoryForThisTask()
       }
     }
   }

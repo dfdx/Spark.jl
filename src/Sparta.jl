@@ -10,8 +10,10 @@ export SparkContext,
        map_partitions_with_index,
        reduce,
        collect,
-       close
+       count,
+       close,
+       typehint!
 
 include("core.jl")
 
-end # module
+end 

@@ -8,7 +8,7 @@ type JavaRDD <: RDD
 end
 
 """
-Julia type to handle RDDs. Can handle pipelining of operations to reduce Java IO.
+Julia type to handle RDDs. Can handle pipelining of operations to reduce interprocess IO.
 """
 type PipelinedRDD <: RDD
     parentrdd::RDD
@@ -18,12 +18,13 @@ type PipelinedRDD <: RDD
 end
 
 
+"Compute a little portiton of RDD to get determine type of return elements"
 function probe_type(rdd::RDD)
     type_rdd = map(rdd, typeof)
     jobj = jcall(type_rdd.jrdd, "first", JObject, ())
     jbytes = convert(Vector{jbyte}, jobj)
     bytes = reinterpret(Vector{UInt8}, jbytes)
-    typ = deserialized(bytes)    
+    typ = deserialized(bytes)
     return typ
 end
 
@@ -43,9 +44,17 @@ Base.parent(rdd::PipelinedRDD) = rdd.parentrdd
 Base.parent(rdd::RDD) = nothing
 
 
+"""
+Explicitly set element type for this RDD. This may be used on final RDD to prevent
+automatic type probation.
+"""
 typehint!{T}(rdd::RDD, ::Type{T}) = (rdd.meta[:typ] = T)
 
-
+"""
+Extract or calculate type of elements in the source RDD. Source RDD is normally the Java RDD
+that precedes JuliaRDD. Type returned by this method is used to determine how to decode
+byte arrays passed from JVM to Julia.
+"""
 function source_eltype(nextrdd::Union{RDD, Void})
     if nextrdd == nothing
         return nothing
@@ -98,11 +107,18 @@ function PipelinedRDD(parentrdd::RDD, func::Function,
     end
 end
 
-
+"""
+Apply function `f` to each partition of `rdd`. `f` should be of type
+`(index, iterator) -> iterator`
+"""
 function map_partitions_with_index(rdd::RDD, f::Function)
     return PipelinedRDD(rdd, f)
 end
 
+"""
+Apply function `f` to each partition of `rdd`. `f` should be of type
+`(iterator) -> iterator`
+"""
 function map_partitions(rdd::RDD, f::Function)
     function func(idx, it)
         f(it)
@@ -110,6 +126,7 @@ function map_partitions(rdd::RDD, f::Function)
     return PipelinedRDD(rdd, func)
 end
 
+"Apply function `f` to each element of `rdd`"
 function map(rdd::RDD, f::Function)
     function func(idx, it)
         imap(f, it)
@@ -117,13 +134,17 @@ function map(rdd::RDD, f::Function)
     return PipelinedRDD(rdd, func)
 end
 
+"Reduce elements of `rdd` using specified function `f`"
 function reduce(rdd::RDD, f::Function)
     locally_reduced = map_partitions(rdd, it -> reduce(f, it))
     subresults = collect(locally_reduced, eltype(rdd))
     return reduce(f, subresults)
 end
 
-
+"""
+Collect all elements of `rdd` on a driver machine. This method may take optional parameter
+of element type to convert after collecting
+"""
 function collect{T}(rdd::RDD, ::Type{T})
     jobj = jcall(rdd.jrdd, "collect", JObject, ())
     jbyte_arrs = convert(Vector{Vector{jbyte}}, jobj)
@@ -139,7 +160,7 @@ function collect(rdd::RDD)
     return collect(rdd, ET)
 end
 
-
+"Count number of elements in this RDD"
 function count(rdd::RDD)
     return jcall(rdd.jrdd, "count", jlong, ())
 end

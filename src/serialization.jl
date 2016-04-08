@@ -17,6 +17,9 @@ end
 ## Java-compatible serialization. Use it for data
 
 from_bytes(::Type{Vector{UInt8}}, arr::Vector{UInt8}) = arr
+function from_bytes{T}(::Type{T}, arr::Vector{Any})
+    map(T, arr)
+end
 from_bytes(::Type{UTF8String}, arr::Vector{UInt8}) = utf8(arr)
 from_bytes{I<:Integer}(::Type{I}, arr::Vector{UInt8}) = begin
     io = IOBuffer(arr)

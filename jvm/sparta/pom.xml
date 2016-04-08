@@ -114,6 +114,11 @@
       </exclusions>
     </dependency>
     <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-yarn_2.10</artifactId>
+      <version>${spark.version}</version>
+    </dependency>
+    <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-log4j12</artifactId>
       <version>1.7.2</version>
@@ -139,7 +144,7 @@
     <scala.version>2.10.3</scala.version>
     <scala.binary.version>2.10</scala.binary.version>
 
-    <spark.version>1.4.0</spark.version>
+    <spark.version>1.5.2</spark.version>
     <hadoop.version>2.6.0</hadoop.version>
 
     <PermGen>64m</PermGen>
