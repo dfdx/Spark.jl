@@ -1,4 +1,4 @@
-using Sparta
+using Spark
 using Base.Test
 
 # write your own tests here

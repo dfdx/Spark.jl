@@ -1,4 +1,4 @@
-module Sparta
+module Spark
 
 export SparkContext,
        RDD,

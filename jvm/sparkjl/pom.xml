@@ -1,8 +1,8 @@
 <project>
-  <groupId>julia-sparta</groupId>
-  <artifactId>sparta</artifactId>
+  <groupId>sparkjl</groupId>
+  <artifactId>sparkjl</artifactId>
   <modelVersion>4.0.0</modelVersion>
-  <name>sparta</name>
+  <name>sparkjl</name>
   <packaging>jar</packaging>
   <version>0.1</version>
   <repositories>

@@ -5,5 +5,5 @@ catch
     error("Cannot find maven. Is it installed")
 end
 
-cd("../jvm/sparta")
+cd("../jvm/sparkjl")
 run(`mvn clean package`)

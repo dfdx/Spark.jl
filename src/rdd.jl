@@ -17,6 +17,15 @@ type PipelinedRDD <: RDD
     meta::Dict{Symbol,Any}
 end
 
+function Base.show(io::IO, rdd::JavaRDD)
+    typ_str = haskey(rdd.meta, :typ) ? "{$(rdd.meta[:typ])}" : ""
+    print(io, "JavaRDD$typ_str()")    
+end
+function Base.show(io::IO, rdd::PipelinedRDD)
+    typ_str = haskey(rdd.meta, :typ) ? "{$(rdd.meta[:typ])}" : ""
+    print(io, "PipelinedRDD$typ_str($(rdd.parentrdd))")
+end
+
 
 "Compute a little portiton of RDD to get determine type of return elements"
 function probe_type(rdd::RDD)

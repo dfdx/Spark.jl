@@ -1,8 +1,8 @@
 
+
 "Wrapper around JavaSparkContext"
 type SparkContext
     jsc::JJavaSparkContext
-    master::AbstractString
     appname::AbstractString
 end
 
@@ -10,18 +10,21 @@ end
 Params:
  * master - address of application master. Currently only local and standalone modes
             are supported. Default is 'local'
- * appname - name of application           
+ * appname - name of application
 """
-function SparkContext(master::AbstractString="local",
+function SparkContext(;master::AbstractString="",
                       appname::AbstractString="Julia App on Spark")
-    jsc = JJavaSparkContext((JString, JString), master, appname)
-    sc = SparkContext(jsc, master, appname)
-    add_jar(sc, joinpath(Pkg.dir(), "Sparta", "jvm", "sparta", "target", "sparta-0.1.jar"))
+    conf = SparkConf()
+    if (master != "") setmaster(conf, master) end
+    setappname(conf, appname)
+    jsc = JJavaSparkContext((JSparkConf,), conf.jconf)
+    sc = SparkContext(jsc, appname)
+    add_jar(sc, joinpath(Pkg.dir(), "Spark", "jvm", "sparkjl", "target", "sparkjl-0.1.jar"))
     return sc
 end
 
 function Base.show(io::IO, sc::SparkContext)
-    print(io, "SparkContext($(sc.master), $(sc.appname))")
+    print(io, "SparkContext($(sc.appname))")
 end
 
 "Close SparkContext"
