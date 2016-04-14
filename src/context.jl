@@ -51,3 +51,4 @@ function text_file(sc::SparkContext, path::AbstractString)
     # into a JuliaRDD/PipelinedRDD
     return PipelinedRDD(java_rdd, (idx, it) -> it, UTF8String)
 end
+

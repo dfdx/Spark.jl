@@ -25,7 +25,7 @@ using Spark
 
 All examples below are runnable from REPL
 
-### Count lines in a text file
+#### Count lines in a text file
 
 ```
 sc = SparkContext(master="local")
@@ -35,7 +35,7 @@ count(txt)
 close(sc)
 ```
 
-### Map / Reduce on Standalone master, application name
+#### Map / Reduce on Standalone master, application name
 
 ```
 sc = SparkContext(master="spark://spark-standalone:7077", appname="Say 'Hello!'")
@@ -48,7 +48,7 @@ close(sc)
 
 **NOTE:** currently named Julia functions cannot be fully serialized, so functions passed to executors should be either already defined there (e.g. in preinstalled library) or be anonymous functions. 
 
-### Map partitions on Mesos and HDFS
+#### Map partitions on Mesos and HDFS
 
 ```
 sc = SparkContext(master="mesos://mesos-master:5050")
@@ -59,4 +59,4 @@ collect(rdd)
 close(sc)
 ```
 
-For the full supported API see [the list exported functions](https://github.com/dfdx/Spark.jl/blob/master/src/Spark.jl#L3).
+For the full supported API see [the list of exported functions](https://github.com/dfdx/Spark.jl/blob/master/src/Spark.jl#L3).
