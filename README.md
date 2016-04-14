@@ -11,7 +11,8 @@ See [Roadmap](https://github.com/dfdx/Spark.jl/issues/1) for current status.
 Spark.jl requires at least Java 7 and [Maven](https://maven.apache.org/) to be installed and available in `PATH`.
 
 ```
-Pkg.checkout("https://github.com/dfdx/Spark.jl")
+Pkg.clone("https://github.com/dfdx/Spark.jl")
+Pkg.build("Spark")
 ```
 
 This will download and build all Julia and Java dependencies. To use Spark.jl type:
@@ -27,19 +28,18 @@ All examples below are runnable from REPL
 ### Count lines in a text file
 
 ```
-sc = SparkContext()
+sc = SparkContext(master="local")
 path = "file:///var/log/syslog"
 txt = text_file(sc, path)
 count(txt)
-reduce(rdd, +)
 close(sc)
 ```
 
-### Map / Reduce on Standalone master and HDFS
+### Map / Reduce on Standalone master, application name
 
 ```
-sc = SparkContext(master="spark://spark-standalone:7077")
-path = "hdfs://namenode:8020/user/hdfs/test.log"
+sc = SparkContext(master="spark://spark-standalone:7077", appname="Say 'Hello!'")
+path = "file:///var/log/syslog"
 txt = text_file(sc, path)
 rdd = map(txt, line -> length(split(line)))
 reduce(rdd, +)
@@ -48,14 +48,15 @@ close(sc)
 
 **NOTE:** currently named Julia functions cannot be fully serialized, so functions passed to executors should be either already defined there (e.g. in preinstalled library) or be anonymous functions. 
 
-### Map partitions on Mesos
+### Map partitions on Mesos and HDFS
 
 ```
 sc = SparkContext(master="mesos://mesos-master:5050")
 path = "hdfs://namenode:8020/user/hdfs/test.log"
 txt = text_file(sc, path)
-rdd = map_partitions(txt, it -> map(s -> length(split(s)), it))
-reduce(rdd, +)
+rdd = map_partitions(txt, it -> filter(line -> contains(line, "a"), it))
+collect(rdd)
 close(sc)
 ```
 
+For the full supported API see [the list exported functions](https://github.com/dfdx/Spark.jl/blob/master/src/Spark.jl#L3).

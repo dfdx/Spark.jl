@@ -1,6 +1,7 @@
 module Spark
 
-export SparkContext,
+export SparkConfig,
+       SparkContext,
        RDD,
        JuliaRDD,
        JavaRDD,
