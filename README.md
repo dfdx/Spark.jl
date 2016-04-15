@@ -13,6 +13,9 @@ Spark.jl requires at least Java 7 and [Maven](https://maven.apache.org/) to be i
 ```
 Pkg.clone("https://github.com/dfdx/Spark.jl")
 Pkg.build("Spark")
+# we also need latest master of JavaCall.jl
+Pkg.checkout("JavaCall")
+
 ```
 
 This will download and build all Julia and Java dependencies. To use Spark.jl type:
