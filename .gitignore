@@ -9,3 +9,4 @@ project/
 .juliahistory
 *.iml
 *.log
+nohup.out

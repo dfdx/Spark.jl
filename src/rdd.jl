@@ -19,13 +19,12 @@ end
 
 function Base.show(io::IO, rdd::JavaRDD)
     typ_str = haskey(rdd.meta, :typ) ? "{$(rdd.meta[:typ])}" : ""
-    print(io, "JavaRDD$typ_str()")    
+    print(io, "JavaRDD$typ_str()")
 end
 function Base.show(io::IO, rdd::PipelinedRDD)
     typ_str = haskey(rdd.meta, :typ) ? "{$(rdd.meta[:typ])}" : ""
     print(io, "PipelinedRDD$typ_str($(rdd.parentrdd))")
 end
-
 
 "Compute a little portiton of RDD to get determine type of return elements"
 function probe_type(rdd::RDD)
@@ -36,7 +35,6 @@ function probe_type(rdd::RDD)
     typ = deserialized(bytes)
     return typ
 end
-
 
 function Base.eltype(rdd::RDD)
     if haskey(rdd.meta, :typ)
@@ -52,7 +50,6 @@ end
 Base.parent(rdd::PipelinedRDD) = rdd.parentrdd
 Base.parent(rdd::RDD) = nothing
 
-
 """
 Explicitly set element type for this RDD. This may be used on final RDD to prevent
 automatic type probation.
@@ -60,9 +57,9 @@ automatic type probation.
 typehint!{T}(rdd::RDD, ::Type{T}) = (rdd.meta[:typ] = T)
 
 """
-Extract or calculate type of elements in the source RDD. Source RDD is normally the Java RDD
-that precedes JuliaRDD. Type returned by this method is used to determine how to decode
-byte arrays passed from JVM to Julia.
+Extract or calculate type of elements in the source RDD. Source RDD is normally
+the Java RDD that precedes JuliaRDD. Type returned by this method is used
+to determine how to decode byte arrays passed from JVM to Julia.
 """
 function source_eltype(nextrdd::Union{RDD, Void})
     if nextrdd == nothing
@@ -151,18 +148,19 @@ function reduce(rdd::RDD, f::Function)
 end
 
 """
-Collect all elements of `rdd` on a driver machine. This method may take optional parameter
-of element type to convert after collecting
+Collect all elements of `rdd` on a driver machine. This method may take optional
+parameter of element type to convert after collecting
 """
 function collect{T}(rdd::RDD, ::Type{T})
     jobj = jcall(rdd.jrdd, "collect", JObject, ())
     jbyte_arrs = convert(Vector{Vector{jbyte}}, jobj)
-    byte_arrs = Vector{UInt8}[reinterpret(Vector{UInt8}, arr) for arr in jbyte_arrs]
+    byte_arrs = Vector{UInt8}[reinterpret(Vector{UInt8}, arr)
+                              for arr in jbyte_arrs]
     vals = [from_bytes(T, arr) for arr in byte_arrs]
     return vals
 end
 
-
+"Collect elements of this rdd to a driver process"
 function collect(rdd::RDD)
     T = eltype(rdd)
     ET = T != nothing ? T : Vector{UInt8}
@@ -172,4 +170,12 @@ end
 "Count number of elements in this RDD"
 function count(rdd::RDD)
     return jcall(rdd.jrdd, "count", jlong, ())
+end
+
+function cache(rdd::RDD)
+    @assert(typeof(parent(rdd)) == JavaRDD,
+            "Non-pipelineable RDDs are not supported yet")    
+    parent_jrdd = parent(rdd).jrdd
+    jcall(parent_jrdd, "cache", JJavaRDD, ())
+    return rdd
 end

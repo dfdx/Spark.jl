@@ -5,7 +5,7 @@ import java.net._
 
 import org.apache.commons.compress.utils.Charsets
 import org.apache.spark._
-import org.apache.spark.api.java.JavaRDD
+import org.apache.spark.api.java.{JavaSparkContext, JavaRDD}
 import org.apache.spark.rdd.RDD
 
 import scala.collection.JavaConversions._
@@ -119,6 +119,26 @@ object JuliaRDD extends Logging {
     val bytes = str.getBytes(Charsets.UTF_8)
     dataOut.writeInt(bytes.length)
     dataOut.write(bytes)
+  }
+
+  def readRDDFromFile(sc: JavaSparkContext, filename: String, parallelism: Int): JavaRDD[Array[Byte]] = {
+    val file = new DataInputStream(new FileInputStream(filename))
+    try {
+      val objs = new collection.mutable.ArrayBuffer[Array[Byte]]
+      try {
+        while (true) {
+          val length = file.readInt()
+          val obj = new Array[Byte](length)
+          file.readFully(obj)
+          objs.append(obj)
+        }
+      } catch {
+        case eof: EOFException => // No-op
+      }
+      JavaRDD.fromRDD(sc.sc.parallelize(objs, parallelism))
+    } finally {
+      file.close()
+    }
   }
 
 }

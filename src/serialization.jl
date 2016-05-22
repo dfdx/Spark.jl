@@ -21,6 +21,7 @@ function from_bytes{T}(::Type{T}, arr::Vector{Any})
     map(T, arr)
 end
 from_bytes(::Type{UTF8String}, arr::Vector{UInt8}) = utf8(arr)
+from_bytes(::Type{ASCIIString}, arr::Vector{UInt8}) = bytestring(arr)
 from_bytes{I<:Integer}(::Type{I}, arr::Vector{UInt8}) = begin
     io = IOBuffer(arr)
     ntoh(read(io, I))
@@ -29,6 +30,7 @@ end
 
 to_bytes(x::Vector{UInt8}) = x
 to_bytes(x::UTF8String) = convert(Vector{UInt8}, x)
+to_bytes(x::ASCIIString) = convert(Vector{UInt8}, x)
 to_bytes{I<:Integer}(x::I) = begin
     io = IOBuffer()
     write(io, hton(x))
