@@ -19,7 +19,7 @@ function SparkContext(;master::AbstractString="",
     setappname(conf, appname)
     jsc = JJavaSparkContext((JSparkConf,), conf.jconf)
     sc = SparkContext(jsc, appname)
-    add_jar(sc, joinpath(Pkg.dir(), "Spark", "jvm", "sparkjl", "target", "sparkjl-0.1.jar"))
+    add_jar(sc, joinpath(dirname(@__FILE__), "..", "jvm", "sparkjl", "target", "sparkjl-0.1.jar"))
     return sc
 end
 
