@@ -3,9 +3,10 @@ using Base.Test
 
 # write your own tests here
 sc = SparkContext(master="local")
-path = "file:///var/log/syslog"
-txt = text_file(sc, path)
-rdd = map_partitions(txt, it -> map(s -> length(split(s)), it))       
-count(rdd)
-reduce(rdd, +)
+txt = parallelize(sc, ["hello", "world"])
+rdd = map_partitions(txt, it -> map(s -> length(s), it))
+
+@test count(rdd) == 2
+@test reduce(rdd, +) == 10
+
 close(sc)
