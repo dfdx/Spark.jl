@@ -17,7 +17,7 @@ Read data object from a ioet. Returns code and byte array:
 """
 function readobj(io::IO)
     len = readint(io)
-    bytes = len > 0 ? readbytes(io, len) : []
+    bytes = len > 0 ? read(io, len) : []
     return len, bytes
 end
 

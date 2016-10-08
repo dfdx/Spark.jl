@@ -50,11 +50,11 @@ end
 "Create RDD from a text file"
 function text_file(sc::SparkContext, path::AbstractString)
     jrdd = jcall(sc.jsc, "textFile", JJavaRDD, (JString,), path)
-    java_rdd = JavaRDD(jrdd, Dict{Symbol,Any}(:styp => UTF8String,
-                                              :typ => UTF8String))
+    java_rdd = JavaRDD(jrdd, Dict{Symbol,Any}(:styp => String,
+                                              :typ => String))
     # turns out JavaRDD doesn't contain some methods, so we immediately wrap it
     # into a JuliaRDD/PipelinedRDD
-    return PipelinedRDD(java_rdd, (idx, it) -> it, UTF8String)
+    return PipelinedRDD(java_rdd, (idx, it) -> it, String)
 end
 
 
@@ -72,7 +72,7 @@ function parallelize(sc::SparkContext, coll; n_split::Int=-1)
     jrdd = jcall(JJuliaRDD, "readRDDFromFile", JJavaRDD,
                  (JJavaSparkContext, JString, jint),
                  sc.jsc, tmp_path, n_split)
-    java_rdd = JavaRDD(jrdd, Dict{Symbol,Any}(:styp => UTF8String))
+    java_rdd = JavaRDD(jrdd, Dict{Symbol,Any}(:styp => String))
     rdd = PipelinedRDD(java_rdd, (idx, it) -> it, eltype(coll))
     rm(tmp_path)
     return rdd
