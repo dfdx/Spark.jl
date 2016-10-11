@@ -72,7 +72,7 @@ function parallelize(sc::SparkContext, coll; n_split::Int=-1)
     jrdd = jcall(JJuliaRDD, "readRDDFromFile", JJavaRDD,
                  (JJavaSparkContext, JString, jint),
                  sc.jsc, tmp_path, n_split)
-    java_rdd = JavaRDD(jrdd, Dict{Symbol,Any}(:styp => String))
+    java_rdd = JavaRDD(jrdd, Dict{Symbol,Any}(:styp => eltype(coll)))
     rdd = PipelinedRDD(java_rdd, (idx, it) -> it, eltype(coll))
     rm(tmp_path)
     return rdd
