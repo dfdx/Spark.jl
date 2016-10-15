@@ -53,7 +53,17 @@ function dump_stream(io::IO, it)
 end
 
 
+function include_attached()
+    for filename in readdir()
+        if ismatch(r"attached_.{8}\.jl", filename)
+            include(filename)
+        end
+    end
+end
+
+
 function launch_worker()
+    include_attached()
     port = parse(Int, readline(STDIN))    
     sock = connect("127.0.0.1", port)
     try

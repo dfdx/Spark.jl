@@ -15,6 +15,7 @@ include("serialization.jl")
 include("config.jl")
 include("context.jl")
 include("rdd.jl")
+include("attach.jl")
 include("worker.jl")
 
 

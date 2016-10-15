@@ -142,16 +142,26 @@ end
 
 "Reduce elements of `rdd` using specified function `f`"
 function reduce(rdd::RDD, f::Function)
+    process_attachments(context(rdd))
     locally_reduced = map_partitions(rdd, it -> reduce(f, it))
-    subresults = collect(locally_reduced, eltype(rdd))
+    subresults = collect(eltype(rdd), locally_reduced)
     return reduce(f, subresults)
+end
+
+"Get SparkContext of this RDD"
+function context(rdd::RDD)
+    ssc = jcall(rdd.jrdd, "context", JSparkContext, ())
+    jsc = jcall(JJavaSparkContext, "fromSparkContext",
+                JJavaSparkContext, (JSparkContext,), ssc)
+    return SparkContext(jsc, "")  # TODO: get name
 end
 
 """
 Collect all elements of `rdd` on a driver machine. This method may take optional
 parameter of element type to convert after collecting
 """
-function collect{T}(rdd::RDD, ::Type{T})
+function collect{T}(::Type{T}, rdd::RDD)
+    process_attachments(context(rdd))
     jobj = jcall(rdd.jrdd, "collect", JObject, ())
     jbyte_arrs = convert(Vector{Vector{jbyte}}, jobj)
     byte_arrs = Vector{UInt8}[reinterpret(Vector{UInt8}, arr)
@@ -162,13 +172,15 @@ end
 
 "Collect elements of this rdd to a driver process"
 function collect(rdd::RDD)
+    process_attachments(context(rdd))
     T = eltype(rdd)
     ET = T != nothing ? T : Vector{UInt8}
-    return collect(rdd, ET)
+    return collect(ET, rdd)
 end
 
 "Count number of elements in this RDD"
 function count(rdd::RDD)
+    process_attachments(context(rdd))
     return jcall(rdd.jrdd, "count", jlong, ())
 end
 

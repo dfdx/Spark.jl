@@ -37,4 +37,6 @@ to_bytes{I<:Integer}(x::I) = begin
     io.data
 end
 
-to_bytes(x) = serialized(x)  # generic serialization for Julia objects
+# generic serialization & deserialization for Julia objects
+from_bytes{T}(::Type{T}, arr::Vector{UInt8}) = deserialized(arr)
+to_bytes(x) = serialized(x)
