@@ -23,5 +23,5 @@ end
 
 macro attach(ex)
     save_attachment(ex)
-    ex
+    esc(ex)
 end
