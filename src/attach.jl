@@ -16,6 +16,10 @@ function process_attachments(sc::SparkContext)
                 write(io, string(ex))
             end
             add_file(sc, path)
+            # if it's `include` expression, also attach included file
+            if isa(ex, Expr) && ex.head == :call && ex.args[1] == :include
+                add_file(sc, ex.args[2])
+            end
          end
     end
     clear_attachments!()
