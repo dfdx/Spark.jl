@@ -11,6 +11,7 @@ JJavaRDD = @jimport org.apache.spark.api.java.JavaRDD
 JJavaPairRDD = @jimport org.apache.spark.api.java.JavaPairRDD
 JJuliaRDD = @jimport org.apache.spark.api.julia.JuliaRDD
 JJuliaPairRDD = @jimport org.apache.spark.api.julia.JuliaPairRDD
+JRDDUtils = @jimport org.apache.spark.api.julia.RDDUtils
 
 
 include("init.jl")

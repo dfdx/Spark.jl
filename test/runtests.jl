@@ -10,4 +10,5 @@ include("flat_map.jl")
 include("cartesian.jl")
 include("group_by_key.jl")
 include("reduce_by_key.jl")
+include("repartition_coalesce.jl")
 
