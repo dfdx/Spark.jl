@@ -1,0 +1,39 @@
+environment:
+  HADOOP_HOME: C:\projects\hadoop
+  matrix:
+  - JULIAVERSION: "julialang/bin/winnt/x64/0.5/julia-0.5-latest-win64.exe"
+    JAVA_HOME: C:\Program Files\Java\jdk1.7.0\  
+
+notifications:
+  - provider: Email
+    on_build_success: false
+    on_build_failure: false
+    on_build_status_changed: false
+
+os: Windows Server 2012
+
+install:
+# Download most recent Julia Windows binary
+  - ps: (new-object net.webclient).DownloadFile(
+        $("http://s3.amazonaws.com/"+$env:JULIAVERSION),
+        "C:\projects\julia-binary.exe")
+        
+#install hadoop winutils
+  - cmd: md C:\projects\hadoop
+  - cmd: md C:\projects\hadoop\bin
+  - ps: (new-object System.Net.WebClient).DownloadFile(
+        "https://github.com/steveloughran/winutils/blob/master/hadoop-2.6.0/bin/winutils.exe?raw=true", 
+        "C:\projects\hadoop\bin\winutils.exe")
+
+# Run installer silently, output to C:\projects\julia
+  - C:\projects\julia-binary.exe /S /D=C:\projects\julia
+
+build_script:
+# Need to convert from shallow to complete for Pkg.clone to work
+  - IF EXIST .git\shallow (git fetch --unshallow)
+  - C:\projects\julia\bin\julia -e "versioninfo();
+      Pkg.clone(pwd(), \"Spark\"); Pkg.build(\"Spark\")"
+
+test_script:
+  - C:\projects\julia\bin\julia --check-bounds=yes -e "Pkg.test(\"Spark\")"
+
