@@ -1,6 +1,7 @@
 # Spark.jl
 
 [![Build Status](https://travis-ci.org/dfdx/Spark.jl.svg?branch=master)](https://travis-ci.org/dfdx/Spark.jl)
+[![Build status](https://ci.appveyor.com/api/projects/status/vf5w4l37icc8m35q?svg=true)](https://ci.appveyor.com/project/dfdx/spark-jl)
 
 Julia interface to Apache Spark. 
 
