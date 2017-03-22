@@ -79,7 +79,12 @@ function launch_worker()
         # info("Julia: exiting")
     catch e
         # TODO: handle the case when JVM closes connection
-        Base.show_backtrace(STDERR, catch_backtrace())
+        io = IOBuffer()
+        Base.show_backtrace(io, catch_backtrace())
+        seekstart(io)
+        bt = readall(io)
+        info(bt)
+        write(STDERR, bt)
         writeint(sock, JULIA_EXCEPTION_THROWN)
         rethrow()
     end
