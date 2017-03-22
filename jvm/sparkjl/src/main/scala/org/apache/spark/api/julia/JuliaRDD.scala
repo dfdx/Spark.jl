@@ -67,6 +67,7 @@ object JuliaRDD extends Logging {
 
       // Create and start the worker
       val pb = new ProcessBuilder(Seq("julia", "-e", "using Spark; using Iterators; Spark.launch_worker()"))
+      pb.directory(new File(SparkFiles.getRootDirectory()))
       // val workerEnv = pb.environment()
       // workerEnv.putAll(envVars)
       val worker = pb.start()
