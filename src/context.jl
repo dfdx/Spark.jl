@@ -33,7 +33,7 @@ end
 
 function clear_up_tempdir(sc::SparkContext)
     if sc.tempdir != ""
-        rm(sc.tempdir, true)
+        rm(sc.tempdir, recursive=true)
     end
 end
 

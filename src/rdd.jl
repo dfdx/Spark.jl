@@ -143,7 +143,7 @@ end
 "Reduce elements of `rdd` using specified function `f`"
 function reduce(rdd::RDD, f::Function)
     process_attachments(context(rdd))
-    locally_reduced = map_partitions(rdd, it -> reduce(f, it))
+    locally_reduced = map_partitions(rdd, it -> [reduce(f, it)])
     subresults = collect(eltype(rdd), locally_reduced)
     return reduce(f, subresults)
 end
