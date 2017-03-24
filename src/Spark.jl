@@ -15,7 +15,8 @@ export SparkConfig,
        count,
        close,
        typehint!,
-       @attach
+       @attach,
+       @broadcast
 
 include("core.jl")
 
