@@ -45,8 +45,8 @@ macro attach(ex)
     esc(ex)
 end
 
-function broadcast_internal(sc::SparkContext, var::Any, var_name::AbstractString)
-    temp_filename = generate_temp_filename("broadcast_", ".jbin")
+function share_variable_internal(sc::SparkContext, var::Any, var_name::AbstractString)
+    temp_filename = generate_temp_filename("sharevar__", ".jbin")
     path = joinpath(get_temp_dir(sc), temp_filename)
     open(path, "w") do io
         serialize(io, var)
@@ -67,8 +67,8 @@ macro variable_name(var)
 end
 
 "Makes the variable available on workers"
-macro broadcast(sc, var)
+macro share_variable(sc, var)
     quote
-        broadcast_internal($(esc(sc)), $(esc(var)), @variable_name($(esc(var))))
+        share_variable_internal($(esc(sc)), $(esc(var)), @variable_name($(esc(var))))
     end
 end

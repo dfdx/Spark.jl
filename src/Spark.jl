@@ -16,7 +16,7 @@ export SparkConfig,
        close,
        typehint!,
        @attach,
-       @broadcast
+       @share_variable
 
 include("core.jl")
 
