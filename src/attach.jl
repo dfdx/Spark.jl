@@ -53,7 +53,7 @@ function share_variable_internal(sc::SparkContext, var::Any, var_name::AbstractS
     end
     add_file(sc, convert_to_uri(path))
     ex = quote
-            open("$temp_filename", "r") do io
+            open($temp_filename, "r") do io
                 global $var_name = deserialize(io)
             end
          end
