@@ -52,12 +52,12 @@ function share_variable_internal(sc::SparkContext, var::Any, var_name::AbstractS
         serialize(io, var)
     end
     add_file(sc, convert_to_uri(path))
-    worker_string = """
-            open(\"$temp_filename\", \"r\") do io
+    ex = quote
+            open("$temp_filename", "r") do io
                 global $var_name = deserialize(io)
             end
-            """
-    save_attachment(parse(worker_string))
+         end
+    save_attachment(ex)
 end
 
 # the string function doesn't work correctly inside quotes
