@@ -45,30 +45,25 @@ macro attach(ex)
     esc(ex)
 end
 
-function share_variable_internal(sc::SparkContext, var::Any, var_name::AbstractString)
-    temp_filename = generate_temp_filename("sharevar__", ".jbin")
+"Makes the value of data available on workers as symbol name"
+function share_variable(sc::SparkContext, name::Symbol, data::Any)
+    temp_filename = generate_temp_filename("sharevar_", ".jbin")
     path = joinpath(get_temp_dir(sc), temp_filename)
     open(path, "w") do io
-        serialize(io, var)
+        serialize(io, data)
     end
     add_file(sc, convert_to_uri(path))
     ex = quote
             open($temp_filename, "r") do io
-                global $var_name = deserialize(io)
+                global $name = deserialize(io)
             end
          end
     save_attachment(ex)
-end
-
-# the string function doesn't work correctly inside quotes
-# so need this extra call so that we get the right variable name
-macro variable_name(var)
-    string(var)
+    data
 end
 
 "Makes the variable available on workers"
-macro share_variable(sc, var)
-    quote
-        share_variable_internal($(esc(sc)), $(esc(var)), @variable_name($(esc(var))))
-    end
+macro share(sc, var)
+    q = Expr(:quote, var)
+    :(share_variable($(esc(sc)), $q, $(esc(var))))
 end
