@@ -153,7 +153,7 @@ function context(rdd::RDD)
     ssc = jcall(rdd.jrdd, "context", JSparkContext, ())
     jsc = jcall(JJavaSparkContext, "fromSparkContext",
                 JJavaSparkContext, (JSparkContext,), ssc)
-    return SparkContext(jsc, "")  # TODO: get name
+    return SparkContext(jsc)
 end
 
 """
