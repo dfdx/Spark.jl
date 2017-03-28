@@ -13,10 +13,10 @@ Params:
             are supported. Default is 'local'
  * appname - name of application
 """
-function SparkContext(;master::AbstractString="",
+function SparkContext(;master::AbstractString="local",
                       appname::AbstractString="Julia App on Spark")
     conf = SparkConf()
-    if (master != "") setmaster(conf, master) end
+    setmaster(conf, master)
     setappname(conf, appname)
     jsc = JJavaSparkContext((JSparkConf,), conf.jconf)
     sc = SparkContext(jsc, appname, "")
