@@ -2,6 +2,8 @@
 "Wrapper around JavaSparkContext"
 type SparkContext
     jsc::JJavaSparkContext
+    master::AbstractString
+    appname::AbstractString
     tempdir::AbstractString
 end
 
@@ -12,20 +14,22 @@ Params:
             are supported. Default is 'local'
  * appname - name of application
 """
-function SparkContext(;master::AbstractString="",
+function SparkContext(;master::AbstractString="local",
                       appname::AbstractString="Julia App on Spark")
     conf = SparkConf()
-    if (master != "") setmaster(conf, master) end
+    setmaster(conf, master)
     setappname(conf, appname)
     jsc = JJavaSparkContext((JSparkConf,), conf.jconf)
-    sc = SparkContext(jsc, "")
+    sc = SparkContext(jsc, master, appname, "")
     add_jar(sc, joinpath(dirname(@__FILE__), "..", "jvm", "sparkjl", "target", "sparkjl-0.1.jar"))
     finalizer(sc, clear_up_tempdir)
     return sc
 end
 
 function SparkContext(jsc::JJavaSparkContext)
-    sc = SparkContext(jsc, "")
+    appname = jcall(jsc, "appName", JString, ())
+    master = jcall(jsc, "master", JString, ())
+    sc = SparkContext(jsc, master, appname, "")
     finalizer(sc, clear_up_tempdir)
     return sc
 end
@@ -45,7 +49,7 @@ function get_temp_dir(sc::SparkContext)
 end
 
 function Base.show(io::IO, sc::SparkContext)
-    print(io, "SparkContext($(sc.appname))")
+    print(io, "SparkContext($(sc.master),$(sc.appname))")
 end
 
 
