@@ -146,7 +146,7 @@ output items (so `f` should return an iterator rather than a single item)
 """
 function flat_map(rdd::RDD, f::Function)
     function func(idx, it)
-        IterateOverSubIterators(imap(f, it))
+        FlatMapIterator(imap(f, it))
     end
     return PipelinedRDD(rdd, func)
 end
