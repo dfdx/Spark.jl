@@ -132,10 +132,60 @@ function map_partitions(rdd::RDD, f::Function)
     return PipelinedRDD(rdd, func)
 end
 
+type IterateOverSubIterators
+    master_iterator::Any
+end
+
+function get_state_for_next_value(iosi::IterateOverSubIterators, outer_state)
+    if !done(iosi.master_iterator, outer_state)
+        next_outer = next(iosi.master_iterator, outer_state)
+        next_inner_state = start(next_outer[1])
+        if done(next_outer[1], next_inner_state)
+            get_state_for_next_value(iosi::IterateOverSubIterators, next_outer[2])
+        else
+            (next_outer[2], next_outer[1], next_inner_state)
+        end
+    else
+        return (outer_state, Void, Void)
+    end
+end
+
+function Base.start(iosi::IterateOverSubIterators)
+    get_state_for_next_value(iosi, start(iosi.master_iterator))
+end
+
+function Base.next(iosi::IterateOverSubIterators, state)
+    if !done(state[2], state[3])
+        next_inner = next(state[2], state[3])
+        if !done(state[2], next_inner[2])
+            (next_inner[1], (state[1], state[2], next_inner[2]))
+        else
+            (next_inner[1], get_state_for_next_value(iosi, state[1]))
+        end
+    else
+        next(iosi, get_state_for_next_value(iosi, state[1]))
+    end
+end
+
+function Base.done(iosi::IterateOverSubIterators, state)
+    state[2] == Void
+end
+
 "Apply function `f` to each element of `rdd`"
 function map(rdd::RDD, f::Function)
     function func(idx, it)
         imap(f, it)
+    end
+    return PipelinedRDD(rdd, func)
+end
+
+"""
+Similar to `map`, but each input item can be mapped to 0 or more 
+output items (so `f` should return an iterator rather than a single item)
+"""
+function flat_map(rdd::RDD, f::Function)
+    function func(idx, it)
+        IterateOverSubIterators(imap(f, it))
     end
     return PipelinedRDD(rdd, func)
 end
