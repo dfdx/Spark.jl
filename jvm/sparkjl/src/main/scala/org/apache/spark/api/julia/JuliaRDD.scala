@@ -5,7 +5,7 @@ import java.net._
 
 import org.apache.commons.compress.utils.Charsets
 import org.apache.spark._
-import org.apache.spark.api.java.{JavaSparkContext, JavaRDD}
+import org.apache.spark.api.java.{JavaSparkContext, JavaRDD, JavaPairRDD}
 import org.apache.spark.rdd.RDD
 
 import scala.collection.JavaConversions._
@@ -14,9 +14,8 @@ import scala.language.existentials
 
 class JuliaRDD(
     @transient parent: RDD[_],
-    command: Array[Byte],
-    inputType: Array[Byte]
-) extends RDD[Array[Byte]](parent) {
+    command: Array[Byte]
+) extends RDD[Any](parent) {
 
   val preservePartitioning = true
   val reuseWorker = true
@@ -28,22 +27,23 @@ class JuliaRDD(
   }
 
 
-  override def compute(split: Partition, context: TaskContext): Iterator[Array[Byte]] = {
+  override def compute(split: Partition, context: TaskContext): Iterator[Any] = {
     val worker: Socket = JuliaRDD.createWorker()
     // Start a thread to feed the process input from our parent's iterator
-    val outputThread = new OutputThread(context, firstParent.iterator(split, context), worker, command, inputType, split)
+    val outputThread = new OutputThread(context, firstParent.iterator(split, context), worker, command, split)
     outputThread.start()
     // Return an iterator that read lines from the process's stdout
     val resultIterator = new InputIterator(context, worker, outputThread)
     new InterruptibleIterator(context, resultIterator)
   }
 
-  val asJavaRDD : JavaRDD[Array[Byte]] = JavaRDD.fromRDD(this)
-
-  override def collect(): Array[Array[Byte]] = {
+  override def collect(): Array[Any] = {
     super.collect()
   }
 
+  def asJavaRDD(): JavaRDD[Any] = {
+    JavaRDD.fromRDD(this)
+  }
 
 }
 
@@ -53,12 +53,16 @@ private object SpecialLengths {
   val TIMING_DATA = -3
   val END_OF_STREAM = -4
   val NULL = -5
+  val PAIR_TUPLE = -6
+  val ARRAY_VALUE = -7
+  val ARRAY_END = -8
+  val STRING_START = -100
 }
 
 object JuliaRDD extends Logging {
 
-  def fromJavaRDD[T](javaRdd: JavaRDD[T], command: Array[Byte], inputType: Array[Byte]): JuliaRDD =
-    new JuliaRDD(JavaRDD.toRDD(javaRdd), command, inputType)
+  def fromRDD[T](rdd: RDD[T], command: Array[Byte]): JuliaRDD =
+    new JuliaRDD(rdd, command)
 
   def createWorker(): Socket = {
     var serverSocket: ServerSocket = null
@@ -98,34 +102,69 @@ object JuliaRDD extends Logging {
     null
   }
 
-
-  def writeIteratorToStream[T](iter: Iterator[T], dataOut: DataOutputStream) {
-
-    def write(obj: Any): Unit = {
-      obj match {
-        case arr: Array[Byte] =>
-          dataOut.writeInt(arr.length)
-          dataOut.write(arr)
-        case str: String =>
-          writeUTF(str, dataOut)
-        case other =>
-          throw new SparkException("Unexpected element type " + other.getClass)
-      }
+  def writeValueToStream[T](obj: Any, dataOut: DataOutputStream) {
+    obj match {
+      case arr: Array[Byte] =>
+        dataOut.writeInt(arr.length)
+        dataOut.write(arr)
+      case tup: Tuple2[Any, Any] =>
+        dataOut.writeInt(SpecialLengths.PAIR_TUPLE)
+        writeValueToStream(tup._1, dataOut)
+        writeValueToStream(tup._2, dataOut)
+      case str: String =>
+        val arr = str.getBytes(Charsets.UTF_8)
+        dataOut.writeInt(-arr.length + SpecialLengths.STRING_START)
+        dataOut.write(arr)
+      case it: Iterator[Any] =>
+        while (it.hasNext) {
+          dataOut.writeInt(SpecialLengths.ARRAY_VALUE)
+          writeValueToStream(it.next(), dataOut)
+        }
+        dataOut.writeInt(SpecialLengths.ARRAY_END)
+      case other =>
+        throw new SparkException("Unexpected element type " + other.getClass)
     }
-
-    iter.foreach(write)
   }
 
-  def writeUTF(str: String, dataOut: DataOutputStream) {
-    val bytes = str.getBytes(Charsets.UTF_8)
-    dataOut.writeInt(bytes.length)
-    dataOut.write(bytes)
+  def readValueFromStream(stream: DataInputStream) : Any = {
+    var typeLength = stream.readInt()
+    typeLength match {
+      case length if length > 0 =>
+        val obj = new Array[Byte](length)
+        stream.readFully(obj)
+        obj
+      case 0 => Array.empty[Byte]
+      case SpecialLengths.PAIR_TUPLE =>
+        (readValueFromStream(stream), readValueFromStream(stream))
+      case SpecialLengths.JULIA_EXCEPTION_THROWN =>
+        // Signals that an exception has been thrown in julia
+        val exLength = stream.readInt()
+        val obj = new Array[Byte](exLength)
+        stream.readFully(obj)
+        throw new Exception(new String(obj, Charsets.UTF_8))
+      case SpecialLengths.ARRAY_VALUE =>
+        val ab = new collection.mutable.ArrayBuffer[Any]()
+        while(typeLength == SpecialLengths.ARRAY_VALUE) {
+          ab += readValueFromStream(stream)
+          typeLength = stream.readInt()
+        }
+        ab.toIterator
+      case SpecialLengths.ARRAY_END =>
+        new Array[Any](0)
+      case SpecialLengths.END_OF_DATA_SECTION =>
+        if (stream.readInt() == SpecialLengths.END_OF_STREAM) {
+          null
+        } else {
+          throw new RuntimeException("Protocol error")
+        }
+    }
+    
   }
 
-  def readRDDFromFile(sc: JavaSparkContext, filename: String, parallelism: Int): JavaRDD[Array[Byte]] = {
+  def readRDDFromFile(sc: JavaSparkContext, filename: String, parallelism: Int): JavaRDD[Any] = {
     val file = new DataInputStream(new FileInputStream(filename))
     try {
-      val objs = new collection.mutable.ArrayBuffer[Array[Byte]]
+      val objs = new collection.mutable.ArrayBuffer[Any]
       try {
         while (true) {
           val length = file.readInt()
@@ -142,5 +181,8 @@ object JuliaRDD extends Logging {
     }
   }
 
+  def cartesianSS(rdd1: JavaRDD[Any], rdd2: JavaRDD[Any]): JavaPairRDD[Any, Any] = {
+    rdd1.cartesian(rdd2)
+  }
 }
 

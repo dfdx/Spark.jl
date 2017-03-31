@@ -7,6 +7,10 @@ const JULIA_EXCEPTION_THROWN = -2
 const TIMING_DATA = -3
 const END_OF_STREAM = -4
 const NULL = -5
+const PAIR_TUPLE = -6
+const ARRAY_VALUE = -7
+const ARRAY_END = -8
+const STRING_START = -100
 
 readint(io::IO) = ntoh(read(io, Int32))
 
@@ -17,28 +21,44 @@ Read data object from a ioet. Returns code and byte array:
 """
 function readobj(io::IO)
     len = readint(io)
-    bytes = len > 0 ? read(io, len) : []
-    return len, bytes
+    if(len > 0)
+        (len , deserialized(read(io, len)))
+    elseif(len == PAIR_TUPLE)
+        res = (readobj(io)[2], readobj(io)[2])
+        (len , res)
+    elseif(len == ARRAY_VALUE)
+        arr = Any[]
+        while len == ARRAY_VALUE
+            append!(arr, readobj(io)[2])
+            len = readint(io)
+        end
+        (len, arr)
+    elseif(len == ARRAY_END)
+        (len, Any[])
+    elseif(len < STRING_START)
+        (len , String(read(io, -len + STRING_START)))
+    elseif(len == STRING_START)
+        (len, "")
+    else
+        (len, [])
+    end
 end
 
 writeint(io::IO, x::Int) = write(io, hton(Int32(x)))
 
-"""Write length and byte array of that length to a ioet"""
-function writeobj(io::IO, obj::Vector{UInt8})
-    writeint(io, length(obj))
-    write(io, obj)
+"""Write object to stream"""
+function writeobj(io::IO, obj::Any)
+    info("writeobj: $obj")
+    sobj = serialized(obj)
+    writeint(io, length(sobj))
+    write(io, sobj)
 end
 
-writeobj(io::IO, obj) = writeobj(io, convert(Vector{UInt8}, obj))
-
-
-
-function load_stream{T}(::Type{T}, io::IO)
+function load_stream(io::IO)
     function it()        
         code, _next = readobj(io)
         while code != END_OF_DATA_SECTION
-            data = from_bytes(T, _next)            
-            produce(data)
+            produce(_next)
             code, _next = readobj(io)
         end
     end
@@ -48,7 +68,7 @@ end
 
 function dump_stream(io::IO, it)
     for v in it
-        writeobj(io, to_bytes(v))
+        writeobj(io, v)
     end
 end
 
@@ -69,10 +89,8 @@ function launch_worker()
     try
         split = readint(sock)
         # info("Julia: starting partition id: $split")
-        T = deserialize(sock)
-        cmd = readobj(sock)[2]
-        func = deserialize(IOBuffer(cmd))        
-        it = load_stream(T, sock)
+        func = readobj(sock)[2]
+        it = load_stream(sock)
         dump_stream(sock, func(split, it))
         writeint(sock, END_OF_DATA_SECTION)
         writeint(sock, END_OF_STREAM)

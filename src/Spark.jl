@@ -16,7 +16,8 @@ export SparkConfig,
        close,
        typehint!,
        @attach,
-       @broadcast
+       @broadcast,
+       cartesian
 
 include("core.jl")
 

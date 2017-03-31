@@ -8,16 +8,16 @@ import org.apache.spark._
 
 
 /**
- * Iterator that connects to a Julia process and reads data back to JVM.
+ * Iterator that connects to a Julia process and reads data back to JVM as pair tuples.
  * */
-class InputIterator(context: TaskContext, worker: Socket, outputThread: OutputThread) extends Iterator[Any] with Logging {
+class InputPairIterator(context: TaskContext, worker: Socket, outputThread: OutputThread) extends Iterator[(Any,Any)] with Logging {
 
   val BUFFER_SIZE = 65536
   
   val env = SparkEnv.get
   val stream = new DataInputStream(new BufferedInputStream(worker.getInputStream, BUFFER_SIZE))
 
-  override def next(): Any = {
+  override def next(): (Any, Any) = {
     val obj = _nextObj
     if (hasNext) {
       _nextObj = read()
@@ -25,12 +25,22 @@ class InputIterator(context: TaskContext, worker: Socket, outputThread: OutputTh
     obj
   }
 
-  private def read(): Any = {
+  private def read(): (Any, Any) = {
     if (outputThread.exception.isDefined) {
       throw outputThread.exception.get
     }
     try {
-      JuliaRDD.readValueFromStream(stream)
+      val obj = JuliaRDD.readValueFromStream(stream)
+      obj match {
+        case pair: Tuple2[Any, Any] =>
+          pair
+      case other =>
+        if (obj == null) {
+          (null, null)
+        } else {
+          throw new SparkException("Unexpected element type " + other.getClass)
+        }
+      }
     } catch {
 
       case e: Exception if context.isInterrupted =>
@@ -39,7 +49,7 @@ class InputIterator(context: TaskContext, worker: Socket, outputThread: OutputTh
 
       case e: Exception if env.isStopped =>
         logDebug("Exception thrown after context is stopped", e)
-        null  // exit silently
+        (null, null)  // exit silently
 
       case e: Exception if outputThread.exception.isDefined =>
         logError("Julia worker exited unexpectedly (crashed)", e)
@@ -51,8 +61,8 @@ class InputIterator(context: TaskContext, worker: Socket, outputThread: OutputTh
     }
   }
 
-  var _nextObj = read()
+  var _nextObj : (Any, Any) = read()
 
-  override def hasNext: Boolean = _nextObj != null
+  override def hasNext: Boolean = _nextObj != (null, null)
 
 }
