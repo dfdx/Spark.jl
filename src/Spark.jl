@@ -16,7 +16,9 @@ export SparkConfig,
        close,
        typehint!,
        @attach,
-       @broadcast,
+       share_variable,
+       @share,
+       flat_map,
        cartesian
 
 include("core.jl")

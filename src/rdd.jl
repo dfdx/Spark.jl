@@ -166,6 +166,17 @@ function map(rdd::RDD, f::Function)
     return create_single_pipeline_rdd(rdd, func)
 end
 
+"""
+Similar to `map`, but each input item can be mapped to 0 or more 
+output items (so `f` should return an iterator rather than a single item)
+"""
+function flat_map(rdd::RDD, f::Function)
+    function func(idx, it)
+        FlatMapIterator(imap(f, it))
+    end
+    return PipelinedRDD(rdd, func)
+end
+
 "Reduce elements of `rdd` using specified function `f`"
 function reduce(rdd::RDD, f::Function)
     process_attachments(context(rdd))
@@ -179,7 +190,7 @@ function context(rdd::RDD)
     ssc = jcall(rdd.jrdd, "context", JSparkContext, ())
     jsc = jcall(JJavaSparkContext, "fromSparkContext",
                 JJavaSparkContext, (JSparkContext,), ssc)
-    return SparkContext(jsc, "")  # TODO: get name
+    return SparkContext(jsc)
 end
 
 """
