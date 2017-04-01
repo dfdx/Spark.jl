@@ -53,6 +53,12 @@ function writeobj(io::IO, obj::Any)
     write(io, sobj)
 end
 
+function writeobj(io::IO, obj::Tuple{Any,Any})
+    writeint(io, PAIR_TUPLE)
+    writeobj(io, obj[1])
+    writeobj(io, obj[2])
+end
+
 function load_stream(io::IO)
     function it()        
         code, _next = readobj(io)

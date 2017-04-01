@@ -177,10 +177,7 @@ object JuliaRDD extends Logging {
       val objs = new collection.mutable.ArrayBuffer[Any]
       try {
         while (true) {
-          val length = file.readInt()
-          val obj = new Array[Byte](length)
-          file.readFully(obj)
-          objs.append(obj)
+          objs.append(readValueFromStream(file))
         }
       } catch {
         case eof: EOFException => // No-op

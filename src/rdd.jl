@@ -8,7 +8,7 @@ type JavaRDD <: SingleRDD
     jrdd::JJavaRDD
 end
 
-"Pure wrapper around JavaRDD"
+"Pure wrapper around JavaPairRDD"
 type JavaPairRDD <: PairRDD
     jrdd::JJavaPairRDD
 end
@@ -23,7 +23,7 @@ type PipelinedRDD <: SingleRDD
 end
 
 """
-Julia type to handle RDDs. Can handle pipelining of operations to reduce interprocess IO.
+Julia type to handle Pair RDDs. Can handle pipelining of operations to reduce interprocess IO.
 """
 type PipelinedPairRDD <: PairRDD
     parentrdd::RDD
@@ -93,7 +93,7 @@ function create_pair_pipeline_rdd(parentrdd::RDD, func::Function)
     command_ser = create_pipeline_command(parentrdd, func)
     jrdd = jcall(JJuliaPairRDD, "fromRDD", JJuliaPairRDD,
                  (JRDD, Vector{jbyte}),
-                 parent(rdd::RDD), command_ser)
+                 as_rdd(parent(parentrdd)), command_ser)
     PipelinedPairRDD(parentrdd, func, jrdd)
 end
 
@@ -158,12 +158,31 @@ function map_partitions(rdd::RDD, f::Function)
     return create_single_pipeline_rdd(rdd, func)
 end
 
+"""
+Apply function `f` to each partition of `rdd`. `f` should be of type
+`(iterator) -> iterator`
+"""
+function map_partitions_pair(rdd::RDD, f::Function)
+    function func(idx, it)
+        f(it)
+    end
+    return create_pair_pipeline_rdd(rdd, func)
+end
+
 "Apply function `f` to each element of `rdd`"
 function map(rdd::RDD, f::Function)
     function func(idx, it)
         imap(f, it)
     end
     return create_single_pipeline_rdd(rdd, func)
+end
+
+"Apply function `f` to each element of `rdd`"
+function map_pair(rdd::RDD, f::Function)
+    function func(idx, it)
+        imap(f, it)
+    end
+    return create_pair_pipeline_rdd(rdd, func)
 end
 
 """
@@ -177,8 +196,19 @@ function flat_map(rdd::RDD, f::Function)
     return create_single_pipeline_rdd(rdd, func)
 end
 
+"""
+Similar to `map`, but each input item can be mapped to 0 or more 
+output items (so `f` should return an iterator rather than a single item)
+"""
+function flat_map_pair(rdd::RDD, f::Function)
+    function func(idx, it)
+        FlatMapIterator(imap(f, it))
+    end
+    return create_single_pipeline_rdd(rdd, func)
+end
+
 "Reduce elements of `rdd` using specified function `f`"
-function reduce(rdd::RDD, f::Function)
+function reduce(rdd::SingleRDD, f::Function)
     process_attachments(context(rdd))
     locally_reduced = map_partitions(rdd, it -> [reduce(f, it)])
     subresults = collect(locally_reduced)
@@ -194,10 +224,9 @@ function context(rdd::RDD)
 end
 
 """
-Collect all elements of `rdd` on a driver machine. This method may take optional
-parameter of element type to convert after collecting
+Collect all elements of `rdd` on a driver machine
 """
-function collect(rdd::RDD)
+function collect(rdd::SingleRDD)
     process_attachments(context(rdd))
     jobj = jcall(rdd.jrdd, "collect", JObject, ())
     jbyte_arrs = convert(Vector{Vector{jbyte}}, jobj)
@@ -230,6 +259,6 @@ function cartesian(rdd1::SingleRDD, rdd2::SingleRDD)
 end
 
 function group_by_key(rdd::PairRDD)
-    jprdd = jcall(rdd.jrdd, "groupByKey", JJavaPairRDD, ())
+    jprdd = jcall(as_java_rdd(rdd), "groupByKey", JJavaPairRDD, ())
     JavaPairRDD(jprdd)
 end
