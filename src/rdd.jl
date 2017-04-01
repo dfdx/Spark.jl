@@ -174,7 +174,7 @@ function flat_map(rdd::RDD, f::Function)
     function func(idx, it)
         FlatMapIterator(imap(f, it))
     end
-    return PipelinedRDD(rdd, func)
+    return create_single_pipeline_rdd(rdd, func)
 end
 
 "Reduce elements of `rdd` using specified function `f`"
