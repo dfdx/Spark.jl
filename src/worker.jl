@@ -48,7 +48,6 @@ writeint(io::IO, x::Int) = write(io, hton(Int32(x)))
 
 """Write object to stream"""
 function writeobj(io::IO, obj::Any)
-    info("writeobj: $obj")
     sobj = serialized(obj)
     writeint(io, length(sobj))
     write(io, sobj)

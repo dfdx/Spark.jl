@@ -10,7 +10,7 @@ import org.apache.spark.rdd.RDD
 
 import scala.collection.JavaConversions._
 import scala.language.existentials
-
+import scala.collection.convert.Wrappers._
 
 class JuliaRDD(
     @transient parent: RDD[_],
@@ -115,7 +115,17 @@ object JuliaRDD extends Logging {
         val arr = str.getBytes(Charsets.UTF_8)
         dataOut.writeInt(-arr.length + SpecialLengths.STRING_START)
         dataOut.write(arr)
-      case it: Iterator[Any] =>
+      case jac: java.util.AbstractCollection[_] =>
+        writeValueToStream(jac.iterator, dataOut)
+      case jit: java.util.Iterator[_] =>
+        while (jit.hasNext) {
+          dataOut.writeInt(SpecialLengths.ARRAY_VALUE)
+          writeValueToStream(jit.next(), dataOut)
+        }
+        dataOut.writeInt(SpecialLengths.ARRAY_END)
+      case ita: Iterable[_] =>
+        writeValueToStream(ita.iterator, dataOut)
+      case it: Iterator[_] =>
         while (it.hasNext) {
           dataOut.writeInt(SpecialLengths.ARRAY_VALUE)
           writeValueToStream(it.next(), dataOut)

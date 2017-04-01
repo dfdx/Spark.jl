@@ -19,7 +19,8 @@ export SparkConfig,
        share_variable,
        @share,
        flat_map,
-       cartesian
+       cartesian,
+       group_by_key
 
 include("core.jl")
 

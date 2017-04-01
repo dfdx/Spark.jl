@@ -228,3 +228,8 @@ function cartesian(rdd1::SingleRDD, rdd2::SingleRDD)
 
     JavaPairRDD(jprdd)
 end
+
+function group_by_key(rdd::PairRDD)
+    jprdd = jcall(rdd.jrdd, "groupByKey", JJavaPairRDD, ())
+    JavaPairRDD(jprdd)
+end

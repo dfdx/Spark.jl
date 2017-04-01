@@ -8,4 +8,5 @@ include("text_file.jl")
 include("share_variable.jl")
 include("flat_map.jl")
 include("cartesian.jl")
+include("group_by_key.jl")
 
