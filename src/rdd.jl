@@ -37,11 +37,12 @@ Params:
  * func - function of type `(index, iterator) -> iterator` to apply to each partition
 """
 function PipelinedRDD(parentrdd::RDD, func::Function)
-    command_ser = create_pipeline_command(parentrdd, func)
+    pipelined_func = create_pipeline_command(parentrdd, func)
+    command_ser = reinterpret(Vector{jbyte}, serialized(pipelined_func))
     jrdd = jcall(JJuliaRDD, "fromRDD", JJuliaRDD,
                  (JRDD, Vector{jbyte}),
                  get_root_rdd(parentrdd), command_ser)
-    PipelinedRDD(parentrdd, func, jrdd)
+    PipelinedRDD(parentrdd, pipelined_func, jrdd)
 end
 
 """
@@ -50,11 +51,12 @@ Params:
  * func - function of type `(index, iterator) -> iterator` to apply to each partition
 """
 function PipelinedPairRDD(parentrdd::RDD, func::Function)
-    command_ser = create_pipeline_command(parentrdd, func)
+    pipelined_func = create_pipeline_command(parentrdd, func)
+    command_ser = reinterpret(Vector{jbyte}, serialized(pipelined_func))
     jrdd = jcall(JJuliaPairRDD, "fromRDD", JJuliaPairRDD,
                  (JRDD, Vector{jbyte}),
                  get_root_rdd(parentrdd), command_ser)
-    PipelinedPairRDD(parentrdd, func, jrdd)
+    PipelinedPairRDD(parentrdd, pipelined_func, jrdd)
 end
 
 # as_java_rdd returns a JJavaRDD or JJavaPairRDD class
@@ -77,14 +79,14 @@ Base.show(io::IO, rdd::JavaPairRDD) = print(io, "JavaPairRDD()")
 Base.show(io::IO, rdd::PipelinedRDD) =  print(io, "PipelinedRDD($(rdd.parentrdd))")
 Base.show(io::IO, rdd::PipelinedPairRDD) = print(io, "PipelinedPairRDD($(rdd.parentrdd))")
 
-create_pipeline_command(rdd::RDD, func) = reinterpret(Vector{jbyte}, serialized(func))
+create_pipeline_command(rdd::RDD, func) = func
 
 function create_pipeline_command(rdd::PipelinedRDD, func)
     parent_func = rdd.func
     function pipelined_func(split, iterator)
         return func(split, parent_func(split, iterator))
     end
-    command_ser = reinterpret(Vector{jbyte}, serialized(pipelined_func))
+    pipelined_func
 end
 
 function create_pipeline_command(rdd::PipelinedPairRDD, func)
@@ -92,7 +94,7 @@ function create_pipeline_command(rdd::PipelinedPairRDD, func)
     function pipelined_func(split, iterator)
         return func(split, parent_func(split, iterator))
     end
-    command_ser = reinterpret(Vector{jbyte}, serialized(pipelined_func))
+    pipelined_func
 end
 
 Base.reinterpret(::Type{Array{jbyte,1}}, bytes::Array{UInt8,1}) =
@@ -128,7 +130,7 @@ function map_partitions_pair(rdd::RDD, f::Function)
     function func(idx, it)
         f(it)
     end
-    return create_pair_pipeline_rdd(rdd, func)
+    return PipelinedPairRDD(rdd, func)
 end
 
 "Apply function `f` to each element of `rdd`"
@@ -144,7 +146,7 @@ function map_pair(rdd::RDD, f::Function)
     function func(idx, it)
         imap(f, it)
     end
-    return create_pair_pipeline_rdd(rdd, func)
+    return PipelinedPairRDD(rdd, func)
 end
 
 """
@@ -166,7 +168,7 @@ function flat_map_pair(rdd::RDD, f::Function)
     function func(idx, it)
         FlatMapIterator(imap(f, it))
     end
-    return create_single_pipeline_rdd(rdd, func)
+    return PipelinedRDD(rdd, func)
 end
 
 "Reduce elements of `rdd` using specified function `f`"
@@ -217,10 +219,19 @@ function cartesian(rdd1::SingleRDD, rdd2::SingleRDD)
                  (JJavaRDD, JJavaRDD),
                  as_java_rdd(rdd1),  as_java_rdd(rdd2))
 
-    JavaPairRDD(jprdd)
+    return JavaPairRDD(jprdd)
 end
 
 function group_by_key(rdd::PairRDD)
     jprdd = jcall(as_java_rdd(rdd), "groupByKey", JJavaPairRDD, ())
-    JavaPairRDD(jprdd)
+    return JavaPairRDD(jprdd)
 end
+
+function reduce_by_key(rdd::PairRDD, f::Function)
+    grouped = group_by_key(rdd)
+    function func(it)
+        (it[1], reduce(f, it[2]))
+    end
+    return map_pair(grouped, func)
+end
+

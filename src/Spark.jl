@@ -23,7 +23,8 @@ export SparkConfig,
        flat_map,
        flat_map_pair,
        cartesian,
-       group_by_key
+       group_by_key,
+       reduce_by_key
 
 include("core.jl")
 
