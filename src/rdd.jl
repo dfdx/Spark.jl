@@ -192,13 +192,26 @@ Collect all elements of `rdd` on a driver machine
 """
 function collect(rdd::SingleRDD)
     process_attachments(context(rdd))
-    jobj = jcall(rdd.jrdd, "collect", JObject, ())
-    jbyte_arrs = convert(Vector{Vector{jbyte}}, jobj)
-    byte_arrs = Vector{UInt8}[reinterpret(Vector{UInt8}, arr)
-                              for arr in jbyte_arrs]
-    vals = [deserialized(arr) for arr in byte_arrs]
-    return vals
+    jbyte_arr = jcall(JJuliaRDD, "collectToJulia", Vector{jbyte},
+                 (JJavaRDD,),
+                 as_java_rdd(rdd))
+
+    byte_arrs = reinterpret(Vector{UInt8}, jbyte_arr)
+    val = readobj(IOBuffer(byte_arrs))[2]
+    return val
 end
+
+function collect(rdd::PairRDD)
+    process_attachments(context(rdd))
+    jbyte_arr = jcall(JJuliaPairRDD, "collectToJulia", Vector{jbyte},
+                 (JJavaPairRDD,),
+                 as_java_rdd(rdd))
+
+    byte_arrs = reinterpret(Vector{UInt8}, jbyte_arr)
+    val = readobj(IOBuffer(byte_arrs))[2]
+    return val
+end
+
 
 "Count number of elements in this RDD"
 function count(rdd::RDD)

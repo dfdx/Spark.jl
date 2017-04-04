@@ -36,10 +36,6 @@ class JuliaPairRDD(
     new InterruptibleIterator(context, resultIterator)
   }
 
-  override def collect(): Array[(Any, Any)] = {
-    super.collect()
-  }
-
   def asJavaPairRDD(): JavaPairRDD[Any, Any] = {
     JavaPairRDD.fromRDD(this)
   }
@@ -86,6 +82,15 @@ object JuliaPairRDD extends Logging {
       }
     }
     null
+  }
+
+  def collectToJulia(rdd: JavaPairRDD[Any, Any]): Array[Byte] = {
+    val byteArrayOut = new ByteArrayOutputStream()
+    val dataStream = new DataOutputStream(byteArrayOut)
+    val javaCollected = rdd.collect()
+    JuliaRDD.writeValueToStream(javaCollected, dataStream)
+    dataStream.flush()
+    byteArrayOut.toByteArray()
   }
 
 }

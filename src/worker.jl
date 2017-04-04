@@ -10,6 +10,7 @@ const NULL = -5
 const PAIR_TUPLE = -6
 const ARRAY_VALUE = -7
 const ARRAY_END = -8
+const INTEGER = -9
 const STRING_START = -100
 
 readint(io::IO) = ntoh(read(io, Int32))
@@ -29,7 +30,7 @@ function readobj(io::IO)
     elseif(len == ARRAY_VALUE)
         arr = Any[]
         while len == ARRAY_VALUE
-            append!(arr, readobj(io)[2])
+            push!(arr, readobj(io)[2])
             len = readint(io)
         end
         (len, arr)
@@ -39,6 +40,8 @@ function readobj(io::IO)
         (len , String(read(io, -len + STRING_START)))
     elseif(len == STRING_START)
         (len, "")
+    elseif(len == INTEGER)
+        (len, ntoh(read(io, Int64)))
     else
         (len, [])
     end
@@ -57,6 +60,17 @@ function writeobj(io::IO, obj::Tuple{Any,Any})
     writeint(io, PAIR_TUPLE)
     writeobj(io, obj[1])
     writeobj(io, obj[2])
+end
+
+function writeobj(io::IO, str::AbstractString)
+    utf8 = convert(Vector{UInt8}, str)
+    writeint(io, STRING_START - length(utf8))
+    write(io, utf8)
+end
+
+function writeobj(io::IO, x::Integer)
+    writeint(io, INTEGER)
+    write(io, hton(Int64(x)))
 end
 
 function load_stream(io::IO)

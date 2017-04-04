@@ -37,10 +37,6 @@ class JuliaRDD(
     new InterruptibleIterator(context, resultIterator)
   }
 
-  override def collect(): Array[Any] = {
-    super.collect()
-  }
-
   def asJavaRDD(): JavaRDD[Any] = {
     JavaRDD.fromRDD(this)
   }
@@ -56,6 +52,7 @@ private object SpecialLengths {
   val PAIR_TUPLE = -6
   val ARRAY_VALUE = -7
   val ARRAY_END = -8
+  val INTEGER = -9
   val STRING_START = -100
 }
 
@@ -131,6 +128,15 @@ object JuliaRDD extends Logging {
           writeValueToStream(it.next(), dataOut)
         }
         dataOut.writeInt(SpecialLengths.ARRAY_END)
+      case x: Int =>
+        dataOut.writeInt(SpecialLengths.INTEGER)
+        dataOut.writeLong(x)
+      case x: java.lang.Long =>
+        dataOut.writeInt(SpecialLengths.INTEGER)
+        dataOut.writeLong(x)
+      case x: java.lang.Integer =>
+        dataOut.writeInt(SpecialLengths.INTEGER)
+        dataOut.writeLong(x.longValue)
       case other =>
         throw new SparkException("Unexpected element type " + other.getClass)
     }
@@ -161,6 +167,15 @@ object JuliaRDD extends Logging {
         ab.toIterator
       case SpecialLengths.ARRAY_END =>
         new Array[Any](0)
+      case SpecialLengths.INTEGER =>
+        stream.readLong()
+      case SpecialLengths.STRING_START =>
+        ""
+      case length if length < SpecialLengths.STRING_START =>
+        val strlength = -length + SpecialLengths.STRING_START
+        val obj = new Array[Byte](strlength)
+        stream.readFully(obj)
+        new String(obj, Charsets.UTF_8)
       case SpecialLengths.END_OF_DATA_SECTION =>
         if (stream.readInt() == SpecialLengths.END_OF_STREAM) {
           null
@@ -190,6 +205,15 @@ object JuliaRDD extends Logging {
 
   def cartesianSS(rdd1: JavaRDD[Any], rdd2: JavaRDD[Any]): JavaPairRDD[Any, Any] = {
     rdd1.cartesian(rdd2)
+  }
+
+  def collectToJulia(rdd: JavaRDD[Any]): Array[Byte] = {
+    val byteArrayOut = new ByteArrayOutputStream()
+    val dataStream = new DataOutputStream(byteArrayOut)
+    val javaCollected = rdd.collect()
+    writeValueToStream(javaCollected, dataStream)
+    dataStream.flush()
+    byteArrayOut.toByteArray()
   }
 }
 
