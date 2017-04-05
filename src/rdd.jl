@@ -201,6 +201,9 @@ function collect(rdd::SingleRDD)
     return val
 end
 
+"""
+Collect all elements of `rdd` on a driver machine
+"""
 function collect(rdd::PairRDD)
     process_attachments(context(rdd))
     jbyte_arr = jcall(JJuliaPairRDD, "collectToJulia", Vector{jbyte},
@@ -219,14 +222,17 @@ function count(rdd::RDD)
     return jcall(rdd.jrdd, "count", jlong, ())
 end
 
-function cache(rdd::RDD)
-    @assert(typeof(parent(rdd)) == JavaRDD,
-            "Non-pipelineable RDDs are not supported yet")    
-    parent_jrdd = parent(rdd).jrdd
-    jcall(parent_jrdd, "cache", JJavaRDD, ())
-    return rdd
+"Persist this RDD with the default storage level (MEMORY_ONLY)"
+function cache(rdd::SingleRDD)
+    JavaRDD(jcall(as_java_rdd(rdd), "cache", JJavaRDD, ()))
 end
 
+"Persist this RDD with the default storage level (MEMORY_ONLY)"
+function cache(rdd::PairRDD)
+    JavaPairRDD(jcall(as_java_rdd(rdd), "cache", JJavaPairRDD, ()))
+end
+
+"Create a pair RDD with every combination of the values of rdd1 and rdd2"
 function cartesian(rdd1::SingleRDD, rdd2::SingleRDD)
     jprdd = jcall(JJuliaRDD, "cartesianSS", JJavaPairRDD,
                  (JJavaRDD, JJavaRDD),
@@ -235,11 +241,17 @@ function cartesian(rdd1::SingleRDD, rdd2::SingleRDD)
     return JavaPairRDD(jprdd)
 end
 
+"When called on a dataset of (K, V) pairs, returns a dataset of (K, [V]) pairs."
 function group_by_key(rdd::PairRDD)
     jprdd = jcall(as_java_rdd(rdd), "groupByKey", JJavaPairRDD, ())
     return JavaPairRDD(jprdd)
 end
 
+"""
+When called on a dataset of (K, V) pairs, returns a dataset of (K, V) pairs where the 
+values for each key are aggregated using the given reduce function func, 
+which must be of type (V,V) => V.
+"""
 function reduce_by_key(rdd::PairRDD, f::Function)
     grouped = group_by_key(rdd)
     function func(it)
