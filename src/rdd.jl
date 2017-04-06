@@ -79,23 +79,17 @@ Base.show(io::IO, rdd::JavaPairRDD) = print(io, "JavaPairRDD()")
 Base.show(io::IO, rdd::PipelinedRDD) =  print(io, "PipelinedRDD($(rdd.parentrdd))")
 Base.show(io::IO, rdd::PipelinedPairRDD) = print(io, "PipelinedPairRDD($(rdd.parentrdd))")
 
+" chain 2 partion functions together " 
+function chain_function(parent_func, child_func)
+    function pipelined_func(split, iterator)
+        return child_func(split, parent_func(split, iterator))
+    end
+    pipelined_func
+end
+
 create_pipeline_command(rdd::RDD, func) = func
-
-function create_pipeline_command(rdd::PipelinedRDD, func)
-    parent_func = rdd.func
-    function pipelined_func(split, iterator)
-        return func(split, parent_func(split, iterator))
-    end
-    pipelined_func
-end
-
-function create_pipeline_command(rdd::PipelinedPairRDD, func)
-    parent_func = rdd.func
-    function pipelined_func(split, iterator)
-        return func(split, parent_func(split, iterator))
-    end
-    pipelined_func
-end
+create_pipeline_command(rdd::PipelinedRDD, func) = chain_function(rdd.func, func)
+create_pipeline_command(rdd::PipelinedPairRDD, func) = chain_function(rdd.func, func)
 
 Base.reinterpret(::Type{Array{jbyte,1}}, bytes::Array{UInt8,1}) =
     jbyte[reinterpret(jbyte, b) for b in bytes]
@@ -111,15 +105,19 @@ function map_partitions_with_index(rdd::RDD, f::Function)
     return PipelinedRDD(rdd, f)
 end
 
+function add_index_param(f::Function)
+    function func(idx, it)
+        f(it)
+    end
+    func
+end
+    
 """
 Apply function `f` to each partition of `rdd`. `f` should be of type
 `(iterator) -> iterator`
 """
 function map_partitions(rdd::RDD, f::Function)
-    function func(idx, it)
-        f(it)
-    end
-    return PipelinedRDD(rdd, func)
+    return PipelinedRDD(rdd, add_index_param(f))
 end
 
 """
@@ -127,31 +125,35 @@ Apply function `f` to each partition of `rdd`. `f` should be of type
 `(iterator) -> iterator`
 """
 function map_partitions_pair(rdd::RDD, f::Function)
-    function func(idx, it)
-        f(it)
-    end
-    return PipelinedPairRDD(rdd, func)
-end
-
-"Apply function `f` to each element of `rdd`"
-function map(rdd::RDD, f::Function)
-    function func(idx, it)
-        imap(f, it)
-    end
-    return PipelinedRDD(rdd, func)
-end
-
-"Apply function `f` to each element of `rdd`"
-function map_pair(rdd::RDD, f::Function)
-    function func(idx, it)
-        imap(f, it)
-    end
-    return PipelinedPairRDD(rdd, func)
+    return PipelinedPairRDD(rdd, add_index_param(f))
 end
 
 """
 creates a function that operates on a partition from an
-element by element function"
+element by element map function
+"""
+function create_map_function(f::Function)
+    function func(idx, it)
+        imap(f, it)
+    end
+    return func
+end
+
+
+"Apply function `f` to each element of `rdd`"
+function map(rdd::RDD, f::Function)
+    return PipelinedRDD(rdd, create_map_function(f))
+end
+
+"Apply function `f` to each element of `rdd`"
+function map_pair(rdd::RDD, f::Function)
+    return PipelinedPairRDD(rdd, create_map_function(f))
+end
+
+"""
+creates a function that operates on a partition from an
+element by element flat_map function
+"""
 function create_flat_map_function(f::Function)
     function func(idx, it)
         FlatMapIterator(imap(f, it))
@@ -191,13 +193,10 @@ function context(rdd::RDD)
     return SparkContext(jsc)
 end
 
-"""
-Collect all elements of `rdd` on a driver machine
-"""
-function collect(rdd::SingleRDD)
+function collect_internal(rdd::RDD, static_java_class, result_class)
     process_attachments(context(rdd))
-    jbyte_arr = jcall(JJuliaRDD, "collectToJulia", Vector{jbyte},
-                 (JJavaRDD,),
+    jbyte_arr = jcall(static_java_class, "collectToJulia", Vector{jbyte},
+                 (result_class,),
                  as_java_rdd(rdd))
 
     byte_arrs = reinterpret(Vector{UInt8}, jbyte_arr)
@@ -208,15 +207,15 @@ end
 """
 Collect all elements of `rdd` on a driver machine
 """
-function collect(rdd::PairRDD)
-    process_attachments(context(rdd))
-    jbyte_arr = jcall(JJuliaPairRDD, "collectToJulia", Vector{jbyte},
-                 (JJavaPairRDD,),
-                 as_java_rdd(rdd))
+function collect(rdd::SingleRDD)
+    collect_internal(rdd, JJuliaRDD, JJavaRDD)
+end
 
-    byte_arrs = reinterpret(Vector{UInt8}, jbyte_arr)
-    val = readobj(IOBuffer(byte_arrs))[2]
-    return val
+"""
+Collect all elements of `rdd` on a driver machine
+"""
+function collect(rdd::PairRDD)
+    collect_internal(rdd, JJuliaPairRDD, JJavaPairRDD)
 end
 
 
@@ -263,4 +262,3 @@ function reduce_by_key(rdd::PairRDD, f::Function)
     end
     return map_pair(grouped, func)
 end
-
