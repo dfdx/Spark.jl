@@ -10,14 +10,14 @@ import org.apache.spark._
 /**
  * Iterator that connects to a Julia process and reads data back to JVM.
  * */
-class InputIterator(context: TaskContext, worker: Socket, outputThread: OutputThread) extends Iterator[Any] with Logging {
+class InputIterator[T](context: TaskContext, worker: Socket, outputThread: OutputThread) extends Iterator[T] with Logging {
 
   val BUFFER_SIZE = 65536
   
   val env = SparkEnv.get
   val stream = new DataInputStream(new BufferedInputStream(worker.getInputStream, BUFFER_SIZE))
 
-  override def next(): Any = {
+  override def next(): T = {
     val obj = _nextObj
     if (hasNext) {
       _nextObj = read()
@@ -25,12 +25,12 @@ class InputIterator(context: TaskContext, worker: Socket, outputThread: OutputTh
     obj
   }
 
-  private def read(): Any = {
+  private def read(): T = {
     if (outputThread.exception.isDefined) {
       throw outputThread.exception.get
     }
     try {
-      JuliaRDD.readValueFromStream(stream)
+      JuliaRDD.readValueFromStream(stream).asInstanceOf[T]
     } catch {
 
       case e: Exception if context.isInterrupted =>
@@ -39,7 +39,7 @@ class InputIterator(context: TaskContext, worker: Socket, outputThread: OutputTh
 
       case e: Exception if env.isStopped =>
         logDebug("Exception thrown after context is stopped", e)
-        null  // exit silently
+        null.asInstanceOf[T]  // exit silently
 
       case e: Exception if outputThread.exception.isDefined =>
         logError("Julia worker exited unexpectedly (crashed)", e)

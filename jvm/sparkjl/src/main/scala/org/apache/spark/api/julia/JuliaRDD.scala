@@ -11,11 +11,12 @@ import org.apache.spark.rdd.RDD
 import scala.collection.JavaConversions._
 import scala.language.existentials
 import scala.collection.convert.Wrappers._
+import scala.reflect.ClassTag
 
-class JuliaRDD(
+class AbstractJuliaRDD[T:ClassTag](
     @transient parent: RDD[_],
     command: Array[Byte]
-) extends RDD[Any](parent) {
+) extends RDD[T](parent) {
 
   val preservePartitioning = true
   val reuseWorker = true
@@ -27,20 +28,22 @@ class JuliaRDD(
   }
 
 
-  override def compute(split: Partition, context: TaskContext): Iterator[Any] = {
+  override def compute(split: Partition, context: TaskContext): Iterator[T] = {
     val worker: Socket = JuliaRDD.createWorker()
     // Start a thread to feed the process input from our parent's iterator
     val outputThread = new OutputThread(context, firstParent.iterator(split, context), worker, command, split)
     outputThread.start()
     // Return an iterator that read lines from the process's stdout
-    val resultIterator = new InputIterator(context, worker, outputThread)
+    val resultIterator = new InputIterator[T](context, worker, outputThread)
     new InterruptibleIterator(context, resultIterator)
   }
+}
 
+
+class JuliaRDD(@transient parent: RDD[_],command: Array[Byte]) extends AbstractJuliaRDD[Any](parent, command) {
   def asJavaRDD(): JavaRDD[Any] = {
     JavaRDD.fromRDD(this)
   }
-
 }
 
 private object SpecialLengths {
@@ -207,13 +210,31 @@ object JuliaRDD extends Logging {
     rdd1.cartesian(rdd2)
   }
 
-  def collectToJulia(rdd: JavaRDD[Any]): Array[Byte] = {
+  def collectToByteArray[T](javaCollected: java.util.List[T]): Array[Byte] = {
     val byteArrayOut = new ByteArrayOutputStream()
     val dataStream = new DataOutputStream(byteArrayOut)
-    val javaCollected = rdd.collect()
     writeValueToStream(javaCollected, dataStream)
     dataStream.flush()
     byteArrayOut.toByteArray()
   }
+  
+  def collectToJulia(rdd: JavaRDD[Any]): Array[Byte] = {
+    collectToByteArray[Any](rdd.collect())
+  }
 }
 
+class JuliaPairRDD(@transient parent: RDD[_],command: Array[Byte]) extends AbstractJuliaRDD[(Any, Any)](parent, command) {
+  def asJavaRDD(): JavaPairRDD[Any, Any] = {
+    JavaPairRDD.fromRDD(this)
+  }
+}
+
+object JuliaPairRDD extends Logging {
+
+  def fromRDD[T](rdd: RDD[T], command: Array[Byte]): JuliaPairRDD =
+    new JuliaPairRDD(rdd, command)
+
+  def collectToJulia(rdd: JavaPairRDD[Any, Any]): Array[Byte] = {
+    JuliaRDD.collectToByteArray[(Any, Any)](rdd.collect())
+  }
+}
