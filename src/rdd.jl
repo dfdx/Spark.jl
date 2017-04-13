@@ -300,3 +300,19 @@ num_partitions(rdd::JavaPairRDD) = jcall(JRDDUtils, "getNumPartitions", jint, (J
 function id(rdd::RDD)
     jcall(rdd.jrdd, "id", jint, ())
 end
+
+"""Return an RDD created by piping elements to a forked external process."""
+function pipe(rdd::RDD, command::String)
+    jrdd = jcall(as_java_rdd(rdd), "pipe", JJavaRDD, (JString,), command)
+    return JavaRDD(jrdd)
+end
+
+function pipe(rdd::RDD, command::Vector{String})
+    jrdd = jcall(as_java_rdd(rdd), "pipe", JJavaRDD, (JList,), convert(JArrayList, command, JString))
+    return JavaRDD(jrdd)
+end
+
+function pipe(rdd::RDD, command::Vector{String}, env::Dict{String,String})
+    jrdd = jcall(as_java_rdd(rdd), "pipe", JJavaRDD, (JList,JMap), convert(JArrayList, command, JString), convert(JHashMap, JString, JString, env))
+    return JavaRDD(jrdd)
+end

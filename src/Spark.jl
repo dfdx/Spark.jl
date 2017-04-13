@@ -29,7 +29,8 @@ export SparkConfig,
        reduce_by_key,
        cache,
        repartition,
-       coalesce
+       coalesce,
+       pipe
 
 include("core.jl")
 

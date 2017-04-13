@@ -12,7 +12,10 @@ JJavaPairRDD = @jimport org.apache.spark.api.java.JavaPairRDD
 JJuliaRDD = @jimport org.apache.spark.api.julia.JuliaRDD
 JJuliaPairRDD = @jimport org.apache.spark.api.julia.JuliaPairRDD
 JRDDUtils = @jimport org.apache.spark.api.julia.RDDUtils
-
+JList = @jimport java.util.List
+JMap = @jimport java.util.Map
+JArrayList = @jimport java.util.ArrayList
+JHashMap = @jimport java.util.HashMap
 
 include("init.jl")
 include("serialization.jl")
