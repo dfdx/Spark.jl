@@ -177,6 +177,16 @@ function flat_map_pair(rdd::RDD, f::Function)
     return PipelinedPairRDD(rdd, create_flat_map_function(f))
 end
 
+function create_filter_function(f::Function)
+    function func(idx, it)
+        filter(f, it)
+    end
+    return func
+end
+
+filter(rdd::SingleRDD, f::Function) = PipelinedRDD(rdd, create_filter_function(f))
+filter(rdd::PairRDD, f::Function) = PipelinedPairRDD(rdd, create_filter_function(f))
+
 "Reduce elements of `rdd` using specified function `f`"
 function reduce(rdd::RDD, f::Function)
     process_attachments(context(rdd))
