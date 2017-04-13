@@ -250,6 +250,24 @@ function group_by_key(rdd::PairRDD)
     return JavaPairRDD(jprdd)
 end
 
+"""Return a new RDD that has exactly num_partitions partitions."""
+function repartition{T<:RDD}(rdd::T, num_partitions::Integer)
+    (Tjr, Tr) = (T <: PairRDD) ? (JJavaPairRDD, JavaPairRDD) : (JJavaRDD, JavaRDD)
+    jrdd = jcall(as_java_rdd(rdd), "repartition", Tjr, (jint,), num_partitions)
+    return Tr(jrdd)
+end
+
+"""Return a new RDD that is reduced into num_partitions partitions."""
+function coalesce{T<:RDD}(rdd::T, num_partitions::Integer; shuffle::Union{Void,Bool}=nothing)
+    (Tjr, Tr) = (T <: PairRDD) ? (JJavaPairRDD, JavaPairRDD) : (JJavaRDD, JavaRDD)
+    if shuffle === nothing
+        jrdd = jcall(as_java_rdd(rdd), "coalesce", Tjr, (jint,), num_partitions)
+    else
+        jrdd = jcall(as_java_rdd(rdd), "coalesce", Tjr, (jint,jboolean), num_partitions, shuffle)
+    end
+    return Tr(jrdd)
+end
+
 """
 When called on a dataset of (K, V) pairs, returns a dataset of (K, V) pairs where the 
 values for each key are aggregated using the given reduce function func, 
@@ -261,4 +279,14 @@ function reduce_by_key(rdd::PairRDD, f::Function)
         (it[1], reduce(f, it[2]))
     end
     return map_pair(grouped, func)
+end
+
+"""Returns the number of partitions of this RDD."""
+num_partitions(rdd::Union{PipelinedRDD,PipelinedPairRDD}) = jcall(rdd.jrdd, "getNumPartitions", jint, ())
+num_partitions(rdd::JavaRDD) = jcall(JRDDUtils, "getNumPartitions", jint, (JJavaRDD,), as_java_rdd(rdd))
+num_partitions(rdd::JavaPairRDD) = jcall(JRDDUtils, "getNumPartitions", jint, (JJavaPairRDD,), as_java_rdd(rdd))
+
+"Return the id of the rdd"
+function id(rdd::RDD)
+    jcall(rdd.jrdd, "id", jint, ())
 end
