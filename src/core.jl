@@ -1,7 +1,7 @@
 
 using JavaCall
 using Iterators
-import Base: map, reduce, count, collect, close
+import Base: map, reduce, count, collect, close, filter
 
 JSparkConf = @jimport org.apache.spark.SparkConf
 JSparkContext = @jimport org.apache.spark.SparkContext

@@ -227,7 +227,7 @@ object JuliaRDD extends Logging {
 }
 
 class JuliaPairRDD(@transient parent: RDD[_],command: Array[Byte]) extends AbstractJuliaRDD[(Any, Any)](parent, command) {
-  def asJavaRDD(): JavaPairRDD[Any, Any] = {
+  def asJavaPairRDD(): JavaPairRDD[Any, Any] = {
     JavaPairRDD.fromRDD(this)
   }
 }
