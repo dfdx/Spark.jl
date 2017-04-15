@@ -2,6 +2,8 @@
 "Wrapper around JavaSparkContext"
 type SparkContext
     jsc::JJavaSparkContext
+    master::AbstractString
+    appname::AbstractString
     tempdir::AbstractString
 end
 
@@ -12,20 +14,22 @@ Params:
             are supported. Default is 'local'
  * appname - name of application
 """
-function SparkContext(;master::AbstractString="",
+function SparkContext(;master::AbstractString="local",
                       appname::AbstractString="Julia App on Spark")
     conf = SparkConf()
-    if (master != "") setmaster(conf, master) end
+    setmaster(conf, master)
     setappname(conf, appname)
     jsc = JJavaSparkContext((JSparkConf,), conf.jconf)
-    sc = SparkContext(jsc, "")
+    sc = SparkContext(jsc, master, appname, "")
     add_jar(sc, joinpath(dirname(@__FILE__), "..", "jvm", "sparkjl", "target", "sparkjl-0.1.jar"))
     finalizer(sc, clear_up_tempdir)
     return sc
 end
 
 function SparkContext(jsc::JJavaSparkContext)
-    sc = SparkContext(jsc, "")
+    appname = jcall(jsc, "appName", JString, ())
+    master = jcall(jsc, "master", JString, ())
+    sc = SparkContext(jsc, master, appname, "")
     finalizer(sc, clear_up_tempdir)
     return sc
 end
@@ -45,7 +49,7 @@ function get_temp_dir(sc::SparkContext)
 end
 
 function Base.show(io::IO, sc::SparkContext)
-    print(io, "SparkContext($(sc.appname))")
+    print(io, "SparkContext($(sc.master),$(sc.appname))")
 end
 
 
@@ -70,11 +74,7 @@ end
 "Create RDD from a text file"
 function text_file(sc::SparkContext, path::AbstractString)
     jrdd = jcall(sc.jsc, "textFile", JJavaRDD, (JString,), path)
-    java_rdd = JavaRDD(jrdd, Dict{Symbol,Any}(:styp => String,
-                                              :typ => String))
-    # turns out JavaRDD doesn't contain some methods, so we immediately wrap it
-    # into a JuliaRDD/PipelinedRDD
-    return PipelinedRDD(java_rdd, (idx, it) -> it, String)
+    return JavaRDD(jrdd)
 end
 
 
@@ -92,8 +92,6 @@ function parallelize(sc::SparkContext, coll; n_split::Int=-1)
     jrdd = jcall(JJuliaRDD, "readRDDFromFile", JJavaRDD,
                  (JJavaSparkContext, JString, jint),
                  sc.jsc, tmp_path, n_split)
-    java_rdd = JavaRDD(jrdd, Dict{Symbol,Any}(:styp => eltype(coll)))
-    rdd = PipelinedRDD(java_rdd, (idx, it) -> it, eltype(coll))
     rm(tmp_path)
-    return rdd
+    JavaRDD(jrdd)
 end
