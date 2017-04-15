@@ -81,7 +81,7 @@ object JuliaRDD extends Logging {
       out.flush()
 
       // Wait for it to connect to our socket
-      serverSocket.setSoTimeout(10000)
+      serverSocket.setSoTimeout(50000)
       try {
         val socket = serverSocket.accept()
         // workers.put(socket, worker)
