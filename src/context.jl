@@ -15,8 +15,8 @@ Params:
  * appname - name of application
 """
 function SparkContext(;master::AbstractString="local",
-                      appname::AbstractString="Julia App on Spark")
-    conf = SparkConf()
+                      appname::AbstractString="Julia App on Spark",
+                      conf::SparkConf=SparkConf())
     setmaster(conf, master)
     setappname(conf, appname)
     jsc = JJavaSparkContext((JSparkConf,), conf.jconf)
