@@ -11,14 +11,14 @@ function SparkConf(;opts...)
     end
     return SparkConf(jconf)
 end
-    
 
-function Base.show(io::IO, conf::SparkConf)    
+
+function Base.show(io::IO, conf::SparkConf)
     print(io, "SparkConf()")
 end
 
 
-function Base.setindex!(conf::SparkConf, key::AbstractString, val::AbstractString)
+function Base.setindex!(conf::SparkConf, val::AbstractString, key::AbstractString)
     jcall(conf.jconf, "set", JSparkConf, (JString, JString), key, val)
 end
 
