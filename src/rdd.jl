@@ -79,7 +79,7 @@ Base.show(io::IO, rdd::JavaPairRDD) = print(io, "JavaPairRDD()")
 Base.show(io::IO, rdd::PipelinedRDD) =  print(io, "PipelinedRDD($(rdd.parentrdd))")
 Base.show(io::IO, rdd::PipelinedPairRDD) = print(io, "PipelinedPairRDD($(rdd.parentrdd))")
 
-" chain 2 partion functions together " 
+" chain 2 partion functions together "
 function chain_function(parent_func, child_func)
     function pipelined_func(split, iterator)
         return child_func(split, parent_func(split, iterator))
@@ -111,7 +111,7 @@ function add_index_param(f::Function)
     end
     func
 end
-    
+
 """
 Apply function `f` to each partition of `rdd`. `f` should be of type
 `(iterator) -> iterator`
@@ -162,7 +162,7 @@ function create_flat_map_function(f::Function)
 end
 
 """
-Similar to `map`, but each input item can be mapped to 0 or more 
+Similar to `map`, but each input item can be mapped to 0 or more
 output items (so `f` should return an iterator rather than a single item)
 """
 function flat_map(rdd::RDD, f::Function)
@@ -170,7 +170,7 @@ function flat_map(rdd::RDD, f::Function)
 end
 
 """
-Similar to `map`, but each input item can be mapped to 0 or more 
+Similar to `map`, but each input item can be mapped to 0 or more
 output items (so `f` should return an iterator of pairs rather than a single item)
 """
 function flat_map_pair(rdd::RDD, f::Function)
@@ -190,9 +190,17 @@ filter(rdd::PairRDD, f::Function) = PipelinedPairRDD(rdd, create_filter_function
 "Reduce elements of `rdd` using specified function `f`"
 function reduce(rdd::RDD, f::Function)
     process_attachments(context(rdd))
-    locally_reduced = map_partitions(rdd, it -> [reduce(f, it)])
+    locally_reduced = map_partitions(rdd, it->reduction_function(f, it))
     subresults = collect(locally_reduced)
     return reduce(f, subresults)
+end
+
+function reduction_function(f, it)
+    try
+        return [reduce(f, it)]
+    catch
+        return []
+    end
 end
 
 "Get SparkContext of this RDD"
@@ -279,8 +287,8 @@ function coalesce{T<:RDD}(rdd::T, num_partitions::Integer; shuffle::Union{Void,B
 end
 
 """
-When called on a dataset of (K, V) pairs, returns a dataset of (K, V) pairs where the 
-values for each key are aggregated using the given reduce function func, 
+When called on a dataset of (K, V) pairs, returns a dataset of (K, V) pairs where the
+values for each key are aggregated using the given reduce function func,
 which must be of type (V,V) => V.
 """
 function reduce_by_key(rdd::PairRDD, f::Function)
