@@ -11,7 +11,7 @@ See [Roadmap](https://github.com/dfdx/Spark.jl/issues/1) for current status.
 
 Spark.jl requires at least Java 7 and [Maven](https://maven.apache.org/) to be installed and available in `PATH`.
 
-```
+```julia
 Pkg.clone("https://github.com/dfdx/Spark.jl")
 Pkg.build("Spark")
 # we also need latest master of JavaCall.jl
@@ -21,7 +21,7 @@ Pkg.checkout("JavaCall")
 
 This will download and build all Julia and Java dependencies. To use Spark.jl type:
 
-```
+```julia
 using Spark
 ```
 
@@ -31,7 +31,7 @@ All examples below are runnable from REPL
 
 #### Count lines in a text file
 
-```
+```julia
 sc = SparkContext(master="local")
 path = "file:///var/log/syslog"
 txt = text_file(sc, path)
@@ -41,7 +41,7 @@ close(sc)
 
 #### Map / Reduce on Standalone master, application name
 
-```
+```julia
 sc = SparkContext(master="spark://spark-standalone:7077", appname="Say 'Hello!'")
 path = "file:///var/log/syslog"
 txt = text_file(sc, path)
@@ -54,7 +54,7 @@ close(sc)
 
 #### Map partitions on Mesos and HDFS
 
-```
+```julia
 sc = SparkContext(master="mesos://mesos-master:5050")
 path = "hdfs://namenode:8020/user/hdfs/test.log"
 txt = text_file(sc, path)
