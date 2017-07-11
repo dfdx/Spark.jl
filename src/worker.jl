@@ -22,25 +22,25 @@ Read data object from a ioet. Returns code and byte array:
 """
 function readobj(io::IO)
     len = readint(io)
-    if(len > 0)
+    if (len > 0)
         (len , deserialized(read(io, len)))
-    elseif(len == PAIR_TUPLE)
+    elseif (len == PAIR_TUPLE)
         res = (readobj(io)[2], readobj(io)[2])
         (len , res)
-    elseif(len == ARRAY_VALUE)
+    elseif (len == ARRAY_VALUE)
         arr = Any[]
         while len == ARRAY_VALUE
             push!(arr, readobj(io)[2])
             len = readint(io)
         end
         (len, arr)
-    elseif(len == ARRAY_END)
+    elseif (len == ARRAY_END)
         (len, Any[])
-    elseif(len < STRING_START)
+    elseif (len < STRING_START)
         (len , String(read(io, -len + STRING_START)))
-    elseif(len == STRING_START)
+    elseif (len == STRING_START)
         (len, "")
-    elseif(len == INTEGER)
+    elseif (len == INTEGER)
         (len, ntoh(read(io, Int64)))
     else
         (len, [])
@@ -73,15 +73,18 @@ function writeobj(io::IO, x::Integer)
     write(io, hton(Int64(x)))
 end
 
+
 function load_stream(io::IO)
-    function it()
-        code, _next = readobj(io)
+    ch = Channel{Any}(1024)
+    code, _next = readobj(io)
+    @async begin
         while code != END_OF_DATA_SECTION
-            produce(_next)
+            put!(ch, _next)
             code, _next = readobj(io)
         end
+        close(ch)
     end
-    return Task(it)
+    return ch
 end
 
 
@@ -91,35 +94,3 @@ function dump_stream(io::IO, it)
     end
 end
 
-
-function include_attached()
-    for filename in readdir()
-        if ismatch(r"attached_.{8}\.jl", filename)
-            include(filename)
-        end
-    end
-end
-
-
-function launch_worker()
-    include_attached()
-    port = parse(Int, readline(STDIN))
-    sock = connect("127.0.0.1", port)
-    try
-        split = readint(sock)
-        func = readobj(sock)[2]
-        it = load_stream(sock)
-        dump_stream(sock, func(split, it))
-        writeint(sock, END_OF_DATA_SECTION)
-        writeint(sock, END_OF_STREAM)
-    catch e
-        # TODO: handle the case when JVM closes connection
-        io = IOBuffer()
-        Base.show_backtrace(io, catch_backtrace())
-        seekstart(io)
-        bt = readall(io)
-        info(bt)
-        writeint(sock, JULIA_EXCEPTION_THROWN)
-        writeobj(sock, string(e) * bt)
-    end
-end

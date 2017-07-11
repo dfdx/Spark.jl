@@ -59,14 +59,15 @@ class OutputThread(context: TaskContext, it: Iterator[Any], worker: Socket, comm
         if (!worker.isClosed) {
           Utils.tryLog(worker.shutdownOutput())
         }
-    } finally {
-      // Release memory used by this thread for shuffles
-      // env.shuffleMemoryManager.releaseMemoryForThisThread()
-      env.shuffleMemoryManager.releaseMemoryForThisTask()
-      // Release memory used by this thread for unrolling blocks
-      // env.blockManager.memoryStore.releaseUnrollMemoryForThisThread()
-      env.blockManager.memoryStore.releaseUnrollMemoryForThisTask()
     }
+//    } finally {
+//      // Release memory used by this thread for shuffles
+//      // env.shuffleMemoryManager.releaseMemoryForThisThread()
+//      env.shuffleMemoryManager.releaseMemoryForThisTask()
+//      // Release memory used by this thread for unrolling blocks
+//      // env.blockManager.memoryStore.releaseUnrollMemoryForThisThread()
+//      env.blockManager.memoryStore.releaseUnrollMemoryForThisTask()
+//    }
   }
 
   def writeIteratorToStream[T](iter: Iterator[T], dataOut: DataOutputStream) {

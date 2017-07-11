@@ -1,22 +1,22 @@
 
-abstract RDD
-abstract SingleRDD <: RDD
-abstract PairRDD <: RDD
+abstract type RDD end
+abstract type  SingleRDD <: RDD end
+abstract type PairRDD <: RDD end
 
 "Pure wrapper around JavaRDD"
-type JavaRDD <: SingleRDD
+mutable struct JavaRDD <: SingleRDD
     jrdd::JJavaRDD
 end
 
 "Pure wrapper around JavaPairRDD"
-type JavaPairRDD <: PairRDD
+mutable struct JavaPairRDD <: PairRDD
     jrdd::JJavaPairRDD
 end
 
 """
 Julia type to handle RDDs. Can handle pipelining of operations to reduce interprocess IO.
 """
-type PipelinedRDD <: SingleRDD
+mutable struct PipelinedRDD <: SingleRDD
     parentrdd::RDD
     func::Function
     jrdd::JJuliaRDD
@@ -25,7 +25,7 @@ end
 """
 Julia type to handle Pair RDDs. Can handle pipelining of operations to reduce interprocess IO.
 """
-type PipelinedPairRDD <: PairRDD
+mutable struct PipelinedPairRDD <: PairRDD
     parentrdd::RDD
     func::Function
     jrdd::JJuliaPairRDD
@@ -106,7 +106,7 @@ function map_partitions_with_index(rdd::RDD, f::Function)
 end
 
 function add_index_param(f::Function)
-    function func(idx, it)
+    function func(idx, it)        
         f(it)
     end
     func
@@ -179,13 +179,13 @@ end
 
 function create_filter_function(f::Function)
     function func(idx, it)
-        filter(f, it)
+        Iterators.filter(f, it)
     end
     return func
 end
 
-filter(rdd::SingleRDD, f::Function) = PipelinedRDD(rdd, create_filter_function(f))
-filter(rdd::PairRDD, f::Function) = PipelinedPairRDD(rdd, create_filter_function(f))
+Base.filter(rdd::SingleRDD, f::Function) = PipelinedRDD(rdd, create_filter_function(f))
+Base.filter(rdd::PairRDD, f::Function) = PipelinedPairRDD(rdd, create_filter_function(f))
 
 "Reduce elements of `rdd` using specified function `f`"
 function reduce(rdd::RDD, f::Function)

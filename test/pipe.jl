@@ -3,13 +3,13 @@
 const JULIA = joinpath(JULIA_HOME, "julia")
 
 @static if is_windows()
-const PIPETEST = joinpath(dirname(@__FILE__), "pipetest.cmd")
-const TESTJL = "\"while !eof(STDIN); print(\\\"Julia\\\", readline(STDIN)); end\""
-const TESTJLENV = "\"while !eof(STDIN); print(ENV[\\\"HEADER\\\"], readline(STDIN)); end\""
+    const PIPETEST = joinpath(dirname(@__FILE__), "pipetest.cmd")
+    const TESTJL = "\"while !eof(STDIN); print(\\\"Julia\\\", readline(STDIN; chomp=false)); end\""
+    const TESTJLENV = "\"while !eof(STDIN); print(ENV[\\\"HEADER\\\"], readline(STDIN; chomp=false)); end\""
 else
-const PIPETEST = joinpath(dirname(@__FILE__), "pipetest.sh")
-const TESTJL = """while !eof(STDIN); print("Julia", readline(STDIN)); end"""
-const TESTJLENV = """while !eof(STDIN); print(ENV["HEADER"], readline(STDIN)); end"""
+    const PIPETEST = joinpath(dirname(@__FILE__), "pipetest.sh")
+    const TESTJL = """while !eof(STDIN); print("Julia", readline(STDIN; chomp=false)); end"""
+    const TESTJLENV = """while !eof(STDIN); print(ENV["HEADER"], readline(STDIN; chomp=false)); end"""
 end
 
 sc = SparkContext(master="local")

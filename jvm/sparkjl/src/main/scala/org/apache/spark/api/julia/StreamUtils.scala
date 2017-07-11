@@ -2,7 +2,7 @@ package org.apache.spark.api.julia
 
 import java.io.InputStream
 
-import org.apache.spark.Logging
+import org.apache.spark.internal.Logging
 import org.apache.spark.util.RedirectThread
 
 
