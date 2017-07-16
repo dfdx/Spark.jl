@@ -2,6 +2,8 @@ package org.apache.spark.api.julia
 
 import java.io._
 import java.net._
+import sys.process.Process
+import java.nio.file.Paths
 
 import org.apache.commons.compress.utils.Charsets
 import org.apache.spark._
@@ -10,7 +12,7 @@ import org.apache.spark.rdd.RDD
 
 import scala.collection.JavaConversions._
 import scala.language.existentials
-import scala.collection.convert.Wrappers._
+import org.apache.spark.internal.Logging
 import scala.reflect.ClassTag
 
 class AbstractJuliaRDD[T:ClassTag](
@@ -24,7 +26,7 @@ class AbstractJuliaRDD[T:ClassTag](
   override def getPartitions: Array[Partition] = firstParent.partitions
 
   // Note: needs to override in later versions of Spark
-  def getNumPartitions: Int = firstParent.partitions.length
+  // override def getNumPartitions: Int = firstParent.partitions.length
 
   override val partitioner: Option[Partitioner] = {
     if (preservePartitioning) firstParent.partitioner else None
@@ -73,7 +75,8 @@ object JuliaRDD extends Logging {
       serverSocket = new ServerSocket(0, 1, InetAddress.getByAddress(Array(127, 0, 0, 1).map(_.toByte)))
 
       // Create and start the worker
-      val pb = new ProcessBuilder(Seq("julia", "-e", "using Spark; using Iterators; Spark.launch_worker()"))
+      val juliaPkgDir = Process("julia -e println(Pkg.dir(\"Spark\"))").!!.trim
+      val pb = new ProcessBuilder("julia", Paths.get(juliaPkgDir, "src", "worker_runner.jl").toString())
       pb.directory(new File(SparkFiles.getRootDirectory()))
       // val workerEnv = pb.environment()
       // workerEnv.putAll(envVars)
@@ -193,6 +196,7 @@ object JuliaRDD extends Logging {
     }
 
   }
+
 
   def readRDDFromFile(sc: JavaSparkContext, filename: String, parallelism: Int): JavaRDD[Any] = {
     val file = new DataInputStream(new FileInputStream(filename))

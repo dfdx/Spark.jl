@@ -1,6 +1,6 @@
 package org.apache.spark.api.julia
 
-import org.apache.spark.Logging
+import org.apache.spark.internal.Logging
 import org.apache.spark.api.java.{JavaRDD, JavaPairRDD}
 
 object RDDUtils extends Logging {

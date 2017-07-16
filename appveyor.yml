@@ -1,7 +1,7 @@
 environment:
   HADOOP_HOME: C:\projects\hadoop
   matrix:
-  - JULIA_URL: "https://julialang-s3.julialang.org/bin/winnt/x64/0.5/julia-0.5-latest-win64.exe"
+  - JULIA_URL: "https://julialang-s3.julialang.org/bin/winnt/x64/0.6/julia-0.6-latest-win64.exe"
     JAVA_HOME: C:\Program Files\Java\jdk1.7.0\  
 
 notifications:

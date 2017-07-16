@@ -5,7 +5,7 @@
 # test of basic funtionality
 sc = SparkContext(master="local")
 txt = parallelize(sc, ["hello", "world"])
-rdd = map_partitions(txt, it -> map(func, it))
+rdd = map_partitions(txt, it -> map(func_from_include, it))
 
 @test reduce(rdd, +) == 14
 
