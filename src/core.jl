@@ -6,6 +6,7 @@ import Iterators
 JSparkConf = @jimport org.apache.spark.SparkConf
 JSparkContext = @jimport org.apache.spark.SparkContext
 JJavaSparkContext = @jimport org.apache.spark.api.java.JavaSparkContext
+JSparkSession = @jimport org.apache.spark.sql.SparkSession
 JRDD = @jimport org.apache.spark.rdd.RDD
 JJavaRDD = @jimport org.apache.spark.api.java.JavaRDD
 JJavaPairRDD = @jimport org.apache.spark.api.java.JavaPairRDD
@@ -21,6 +22,7 @@ include("init.jl")
 include("serialization.jl")
 include("config.jl")
 include("context.jl")
+include("sql.jl")
 include("flat_map_iterator.jl")
 include("rdd.jl")
 include("attach.jl")

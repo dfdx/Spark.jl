@@ -104,7 +104,7 @@
 
     <dependency>
       <groupId>org.apache.spark</groupId>
-      <artifactId>spark-core_2.10</artifactId>
+      <artifactId>spark-core_2.11</artifactId>
       <version>${spark.version}</version>
       <exclusions>
         <exclusion>
@@ -115,7 +115,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.spark</groupId>
-      <artifactId>spark-yarn_2.10</artifactId>
+      <artifactId>spark-yarn_2.11</artifactId>
       <version>${spark.version}</version>
     </dependency>
     <dependency>
@@ -131,7 +131,7 @@
     <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
-      <version>2.10.3</version>
+      <version>${scala.version}</version>
     </dependency>
 
 
@@ -140,9 +140,9 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-    <java.version>1.6</java.version>
-    <scala.version>2.10.3</scala.version>
-    <scala.binary.version>2.10</scala.binary.version>
+    <java.version>1.8</java.version>
+    <scala.version>2.11.8</scala.version>
+    <scala.binary.version>2.11</scala.binary.version>
 
     <spark.version>2.1.0</spark.version>
     <hadoop.version>2.6.0</hadoop.version>
@@ -188,7 +188,7 @@
       <plugin>
         <groupId>net.alchim31.maven</groupId>
         <artifactId>scala-maven-plugin</artifactId>
-        <version>3.1.5</version>
+        <version>3.2.2</version>
         <executions>
           <execution>
             <id>scala-compile-first</id>
@@ -355,126 +355,5 @@
           </snapshots>
       </pluginRepository>
   </pluginRepositories>
-
-  <!--<profiles>-->
-    <!--<profile>-->
-      <!--<id>yarn</id>-->
-      <!--<dependencies>-->
-        <!--<dependency>-->
-          <!--<groupId>org.apache.hadoop</groupId>-->
-          <!--<artifactId>hadoop-yarn-api</artifactId>-->
-          <!--<version>${yarn.version}</version>-->
-          <!--<exclusions>-->
-            <!--<exclusion>-->
-              <!--<groupId>javax.servlet</groupId>-->
-              <!--<artifactId>servlet-api</artifactId>-->
-            <!--</exclusion>-->
-            <!--<exclusion>-->
-              <!--<groupId>asm</groupId>-->
-              <!--<artifactId>asm</artifactId>-->
-            <!--</exclusion>-->
-            <!--<exclusion>-->
-              <!--<groupId>org.ow2.asm</groupId>-->
-              <!--<artifactId>asm</artifactId>-->
-            <!--</exclusion>-->
-            <!--<exclusion>-->
-              <!--<groupId>org.jboss.netty</groupId>-->
-              <!--<artifactId>netty</artifactId>-->
-            <!--</exclusion>-->
-            <!--<exclusion>-->
-              <!--<groupId>commons-logging</groupId>-->
-              <!--<artifactId>commons-logging</artifactId>-->
-            <!--</exclusion>-->
-          <!--</exclusions>-->
-        <!--</dependency>-->
-        <!--<dependency>-->
-          <!--<groupId>org.apache.hadoop</groupId>-->
-          <!--<artifactId>hadoop-yarn-common</artifactId>-->
-          <!--<version>${yarn.version}</version>-->
-          <!--<exclusions>-->
-            <!--<exclusion>-->
-              <!--<groupId>asm</groupId>-->
-              <!--<artifactId>asm</artifactId>-->
-            <!--</exclusion>-->
-            <!--<exclusion>-->
-              <!--<groupId>org.ow2.asm</groupId>-->
-              <!--<artifactId>asm</artifactId>-->
-            <!--</exclusion>-->
-            <!--<exclusion>-->
-              <!--<groupId>org.jboss.netty</groupId>-->
-              <!--<artifactId>netty</artifactId>-->
-            <!--</exclusion>-->
-            <!--<exclusion>-->
-              <!--<groupId>javax.servlet</groupId>-->
-              <!--<artifactId>servlet-api</artifactId>-->
-            <!--</exclusion>-->
-            <!--<exclusion>-->
-              <!--<groupId>commons-logging</groupId>-->
-              <!--<artifactId>commons-logging</artifactId>-->
-            <!--</exclusion>-->
-          <!--</exclusions>-->
-        <!--</dependency>-->
-        <!--<dependency>-->
-          <!--<groupId>org.apache.hadoop</groupId>-->
-          <!--<artifactId>hadoop-yarn-server-web-proxy</artifactId>-->
-          <!--<version>${yarn.version}</version>-->
-          <!--<exclusions>-->
-            <!--<exclusion>-->
-              <!--<groupId>asm</groupId>-->
-              <!--<artifactId>asm</artifactId>-->
-            <!--</exclusion>-->
-            <!--<exclusion>-->
-              <!--<groupId>org.ow2.asm</groupId>-->
-              <!--<artifactId>asm</artifactId>-->
-            <!--</exclusion>-->
-            <!--<exclusion>-->
-              <!--<groupId>org.jboss.netty</groupId>-->
-              <!--<artifactId>netty</artifactId>-->
-            <!--</exclusion>-->
-            <!--<exclusion>-->
-              <!--<groupId>javax.servlet</groupId>-->
-              <!--<artifactId>servlet-api</artifactId>-->
-            <!--</exclusion>-->
-            <!--<exclusion>-->
-              <!--<groupId>commons-logging</groupId>-->
-              <!--<artifactId>commons-logging</artifactId>-->
-            <!--</exclusion>-->
-          <!--</exclusions>-->
-        <!--</dependency>-->
-        <!--<dependency>-->
-          <!--<groupId>org.apache.hadoop</groupId>-->
-          <!--<artifactId>hadoop-yarn-client</artifactId>-->
-          <!--<version>${yarn.version}</version>-->
-          <!--<exclusions>-->
-            <!--<exclusion>-->
-              <!--<groupId>asm</groupId>-->
-              <!--<artifactId>asm</artifactId>-->
-            <!--</exclusion>-->
-            <!--<exclusion>-->
-              <!--<groupId>org.ow2.asm</groupId>-->
-              <!--<artifactId>asm</artifactId>-->
-            <!--</exclusion>-->
-            <!--<exclusion>-->
-              <!--<groupId>org.jboss.netty</groupId>-->
-              <!--<artifactId>netty</artifactId>-->
-            <!--</exclusion>-->
-            <!--<exclusion>-->
-              <!--<groupId>javax.servlet</groupId>-->
-              <!--<artifactId>servlet-api</artifactId>-->
-            <!--</exclusion>-->
-            <!--<exclusion>-->
-              <!--<groupId>commons-logging</groupId>-->
-              <!--<artifactId>commons-logging</artifactId>-->
-            <!--</exclusion>-->
-          <!--</exclusions>-->
-        <!--</dependency>-->
-        <!--<dependency>-->
-          <!--<groupId>org.apache.spark</groupId>-->
-          <!--<artifactId>spark-yarn_2.10</artifactId>-->
-          <!--<version>${spark.version}</version>-->
-        <!--</dependency>-->
-      <!--</dependencies>-->
-<!--</profile>-->
-<!--</profiles>-->
 
 </project>
