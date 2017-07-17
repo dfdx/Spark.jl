@@ -1,22 +1,22 @@
 
-abstract type RDD end
-abstract type  SingleRDD <: RDD end
-abstract type PairRDD <: RDD end
+@compat abstract type RDD end
+@compat abstract type SingleRDD <: RDD end
+@compat abstract type PairRDD <: RDD end
 
 "Pure wrapper around JavaRDD"
-mutable struct JavaRDD <: SingleRDD
+type JavaRDD <: SingleRDD
     jrdd::JJavaRDD
 end
 
 "Pure wrapper around JavaPairRDD"
-mutable struct JavaPairRDD <: PairRDD
+type JavaPairRDD <: PairRDD
     jrdd::JJavaPairRDD
 end
 
 """
 Julia type to handle RDDs. Can handle pipelining of operations to reduce interprocess IO.
 """
-mutable struct PipelinedRDD <: SingleRDD
+type PipelinedRDD <: SingleRDD
     parentrdd::RDD
     func::Function
     jrdd::JJuliaRDD
@@ -25,7 +25,7 @@ end
 """
 Julia type to handle Pair RDDs. Can handle pipelining of operations to reduce interprocess IO.
 """
-mutable struct PipelinedPairRDD <: PairRDD
+type PipelinedPairRDD <: PairRDD
     parentrdd::RDD
     func::Function
     jrdd::JJuliaPairRDD

@@ -3,7 +3,7 @@
 
 ## SparkSession
 
-struct SparkSession
+immutable SparkSession
     jsess::JSparkSession
 end
 
@@ -26,7 +26,7 @@ Base.close(sess::SparkSession) = jcall(sess.jsess, "close", Void, ())
 
 ## Dataset
 
-struct Dataset
+immutable Dataset
     jds::JDataset
 end
 

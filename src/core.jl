@@ -1,5 +1,6 @@
 
 using JavaCall
+using Compat
 import Base: map, reduce, count, collect, close
 import Iterators
 
