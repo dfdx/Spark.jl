@@ -2,14 +2,20 @@
 
 const JULIA = joinpath(JULIA_HOME, "julia")
 
+if VERSION < v"0.6.0"
+    const READLINE_CMD = "readline(STDIN)"
+else
+    const READLINE_CMD = "readline(STDIN; chomp=false)"
+end
+
 @static if is_windows()
     const PIPETEST = joinpath(dirname(@__FILE__), "pipetest.cmd")
-    const TESTJL = "\"while !eof(STDIN); print(\\\"Julia\\\", readline(STDIN; chomp=false)); end\""
-    const TESTJLENV = "\"while !eof(STDIN); print(ENV[\\\"HEADER\\\"], readline(STDIN; chomp=false)); end\""
+    const TESTJL = "\"while !eof(STDIN); print(\\\"Julia\\\", $READLINE_CMD); end\""
+    const TESTJLENV = "\"while !eof(STDIN); print(ENV[\\\"HEADER\\\"], $READLINE_CMD); end\""
 else
     const PIPETEST = joinpath(dirname(@__FILE__), "pipetest.sh")
-    const TESTJL = """while !eof(STDIN); print("Julia", readline(STDIN; chomp=false)); end"""
-    const TESTJLENV = """while !eof(STDIN); print(ENV["HEADER"], readline(STDIN; chomp=false)); end"""
+    const TESTJL = """while !eof(STDIN); print("Julia", $READLINE_CMD); end"""
+    const TESTJLENV = """while !eof(STDIN); print(ENV["HEADER"], $READLINE_CMD); end"""
 end
 
 sc = SparkContext(master="local")

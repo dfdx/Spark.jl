@@ -1,6 +1,6 @@
 
 "Wrapper around JavaSparkContext"
-mutable struct SparkContext
+type SparkContext
     jsc::JJavaSparkContext
     master::AbstractString
     appname::AbstractString
