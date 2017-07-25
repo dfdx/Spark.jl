@@ -8,9 +8,9 @@ function init(;extra_cp="", extra_opts=[])
     sparkjlassembly = joinpath(dirname(@__FILE__), "..", "jvm", "sparkjl", "target", "sparkjl-0.1-assembly.jar")
     delim = @static is_windows() ? ";" : ":"
     classpath = join([envcp, sparkjlassembly, extra_cp], delim)
-    try
+    # try
         # prevent exceptions in REPL on code reloading
         JavaCall.init(vcat(["-ea", "-Xmx1024M", "-Djava.class.path=$classpath"], extra_opts))
-    end
+    # end
 end
 
