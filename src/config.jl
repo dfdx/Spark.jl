@@ -4,6 +4,9 @@ type SparkConf
 end
 
 function SparkConf(;opts...)
+    if !JavaCall.isloaded()
+        init()
+    end
     jconf = JSparkConf(())
     opts = Dict(opts)
     for (k, v) in opts

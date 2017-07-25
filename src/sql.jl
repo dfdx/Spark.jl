@@ -10,6 +10,9 @@ end
 function SparkSession(;master="local",
                       appname="Julia App on Spark",
                       config=Dict{String, String}())
+    if !JavaCall.isloaded()
+        init()
+    end
     jbuilder = jcall(JSparkSession, "builder", JSparkSessionBuilder, ())
     jcall(jbuilder, "master", JSparkSessionBuilder, (JString,), master)
     jcall(jbuilder, "appName", JSparkSessionBuilder, (JString,), appname)

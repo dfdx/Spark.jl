@@ -17,6 +17,9 @@ Params:
 function SparkContext(;master::AbstractString="local",
                       appname::AbstractString="Julia App on Spark",
                       conf::SparkConf=SparkConf())
+    if !JavaCall.isloaded()
+        init()
+    end
     setmaster(conf, master)
     setappname(conf, appname)
     jsc = JJavaSparkContext((JSparkConf,), conf.jconf)
