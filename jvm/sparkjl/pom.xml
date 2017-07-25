@@ -139,6 +139,34 @@
       <version>${scala.version}</version>
     </dependency>
 
+    <!-- additional data formats -->
+    
+    <!-- CARBONDATA: uncomment the following dependencies to add support  -->
+    
+    <!-- <dependency> -->
+    <!--   <groupId>org.apache.carbondata</groupId> -->
+    <!--   <artifactId>carbondata-parent</artifactId> -->
+    <!--   <version>1.1.1</version> -->
+    <!--   <type>pom</type> -->
+    <!-- </dependency> -->
+    <!-- <dependency> -->
+    <!--   <groupId>org.apache.carbondata</groupId> -->
+    <!--   <artifactId>carbondata-spark</artifactId> -->
+    <!--   <version>1.0.0-incubating</version> -->
+    <!-- </dependency> -->
+
+    <!-- KUDU: uncomment the following dependencies to add support -->
+    
+    <!-- <dependency> -->
+    <!--   <groupId>org.apache.kudu</groupId> -->
+    <!--   <artifactId>kudu-client</artifactId> -->
+    <!--   <version>1.1.0</version> -->
+    <!-- </dependency> -->
+    <!-- <dependency> -->
+    <!--   <groupId>org.apache.kudu</groupId> -->
+    <!--   <artifactId>kudu-spark2_${scala.binary.version}</artifactId> -->
+    <!--   <version>1.1.0</version> -->
+    <!-- </dependency> -->
 
   </dependencies>
   <properties>

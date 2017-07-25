@@ -27,11 +27,11 @@ Base.close(sess::SparkSession) = jcall(sess.jsess, "close", Void, ())
 ## Dataset
 
 immutable Dataset
-    jds::JDataset
+    jdf::JDataset
 end
 
 
-Base.show(io::IO, ds::Dataset) = jcall(ds.jds, "show", Void, ())
+Base.show(io::IO, ds::Dataset) = jcall(ds.jdf, "show", Void, ())
 
 
 ## IO formats
@@ -41,7 +41,7 @@ function dataframe_reader(sess::SparkSession)
 end
 
 function dataframe_writer(ds::Dataset)
-    return jcall(ds.jds, "write", JDataFrameWriter, ())
+    return jcall(ds.jdf, "write", JDataFrameWriter, ())
 end
 
 # JSON
@@ -72,6 +72,43 @@ function write_parquet(ds::Dataset, path::AbstractString)
 end
 
 
+# generic dataframe reader/writer
+
+function read_df(sess::SparkSession, path::AbstractString=""; format=nothing, options=Dict())
+    jreader = dataframe_reader(sess)
+    if format != nothing
+        jreader = jcall(jreader, "format", JDataFrameReader, (JString,), string(format))
+    end
+    for (k, v) in options
+        jreader = jcall(jreader, "option", JDataFrameReader, (JString, JString), string(k), v)
+    end
+    jds = path != "" ?
+        jcall(jreader, "load", JDataset, (JString,), path) :
+        jcall(jreader, "load", JDataset, (JString,))
+    return Dataset(jds)
+end
+
+
+function write_df(ds::Dataset, path::AbstractString=""; format=nothing, mode=nothing, options=Dict())
+    jwriter = dataframe_writer(ds)
+    if format != nothing
+        jwriter = jcall(jwriter, "format", JDataFrameWriter, (JString,), string(format))
+    end
+    if mode != nothing
+        jwriter = jcall(jwriter, "mode", JDataFrameWriter, (JString,), string(mode))
+    end
+    for (k, v) in options
+        jwriter = jcall(jwriter, "option", JDataFrameWriter, (JString, JString), string(k), v)
+    end
+    if path != ""
+        jcall(jwriter, "save", Void, (JString,), path)
+    else
+        jcall(jwriter, "save", Void, (JString,))
+    end
+end
+
+
+
 ## main API
 
 native_type(obj::JavaObject{Symbol("java.lang.Long")}) = jcall(obj, "longValue", jlong, ())
@@ -89,7 +126,7 @@ Base.getindex(jrow::JGenericRow, i::Integer) = jcall(jrow, "get", JObject, (jint
 
 
 function collect(ds::Dataset)
-    jrows = jcall(ds.jds, "collectAsList", JList, ())
+    jrows = jcall(ds.jdf, "collectAsList", JList, ())
     data = Array{Any}(0)
     for jrow in JavaCall.iterator(jrows)
         arr = [native_type(narrow(jrow[i])) for i=1:length(jrow)]
@@ -99,20 +136,24 @@ function collect(ds::Dataset)
 end
 
 
+function count(ds::Dataset)
+    return jcall(ds.jdf, "count", jlong, ())
+end
 
 
-## temporary code
+function sql(sess::SparkSession, str::AbstractString)
+    jds = jcall(sess.jsess, "sql", JDataset, (JString,), str)
+    return Dataset(jds)
+end
 
 
-iterator(obj::JavaObject) = jcall(obj, "iterator", @jimport(java.util.Iterator), ())
+col(name::Union{String, Symbol}) =
+    jcall(JSQLFunctions, "col", JColumn, (JString,), string(name))
 
-"""
-Given a `JavaObject{T}` narrows down `T` to a real class of the underlying object.
-For example, `JavaObject{:java.lang.Object}` pointing to `java.lang.String`
-will be narrowed down to `JavaObject{:java.lang.String}`
-"""
-function narrow(obj::JavaObject)
-    c = jcall(obj, "getClass", @jimport(java.lang.Class), ())
-    t = jcall(c, "getName", JString, ())
-    return convert(JavaObject{Symbol(t)}, obj)
+
+
+function select(df::Dataset, col_names::Union{Symbol, String}...)
+    col_names = [string(name) for name in col_names]
+    jdf = jcall(df.jdf, "select", JDataset, (JString, Vector{JString},), col_names[1], col_names[2:end])
+    return Dataset(jdf)
 end
