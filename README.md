@@ -25,7 +25,7 @@ This will download and build all Julia and Java dependencies. To use Spark.jl ty
 using Spark
 ```
 
-## Examples
+## RDD Interface: Examples
 
 All examples below are runnable from REPL
 
@@ -64,3 +64,30 @@ close(sc)
 ```
 
 For the full supported API see [the list of exported functions](https://github.com/dfdx/Spark.jl/blob/master/src/Spark.jl#L3).
+
+
+
+## SQL Interface: Examples
+
+All examples assume that you have a file `people.json` with content like this:
+
+```
+{"name": "Alice", "age": 27}
+{"name": "Bob", "age": 32}
+```
+
+Read dataframe from JSON and collect to a driver:
+
+```julia
+spark = SparkSession()
+df = read_json(spark, "/path/to/people.json")
+collect(df)
+```
+
+Read JSON and write Parquet:
+
+```julia
+spark = SparkSession()
+df = read_json(spark, "/path/to/people.json")
+write_parquet(df, "/path/to/people.parquet")
+```
