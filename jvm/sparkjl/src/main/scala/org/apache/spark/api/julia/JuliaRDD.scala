@@ -76,9 +76,13 @@ object JuliaRDD extends Logging {
 
       // Create and start the worker
       val juliaHome = sys.env.get("JULIA_HOME").getOrElse("")
+      val juliaVersion = sys.env.get("JULIA_VERSION").getOrElse("v0.5")
       val juliaCommand = Paths.get(juliaHome, "julia").toString()
-      //TODO read julia command path from env variable
-      val juliaPkgDir = Process(juliaCommand + " -e println(Pkg.dir(\"Spark\"))").!!.trim
+      val juliaPkgDir =  sys.env.get("JULIA_PKGDIR") match {
+          case Some(i) => Paths.get(i, juliaVersion, "Spark").toString()
+          case None => Process(juliaCommand + " -e println(Pkg.dir(\"Spark\"))").!!.trim
+      }
+
       val pb = new ProcessBuilder(juliaCommand, Paths.get(juliaPkgDir, "src", "worker_runner.jl").toString())
 
 
