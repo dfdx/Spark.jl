@@ -2,6 +2,8 @@ using Spark
 
 using Base.Test
 
+Spark.init()
+
 include("basic.jl")
 include("map.jl")
 include("map_partitions.jl")
