@@ -8,5 +8,3 @@ function init()
         JavaCall.init(["-ea", "-Xmx1024M", "-Djava.class.path=$classpath"])
     end
 end
-
-init()

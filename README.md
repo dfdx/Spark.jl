@@ -23,6 +23,7 @@ This will download and build all Julia and Java dependencies. To use Spark.jl ty
 
 ```julia
 using Spark
+Spark.init()
 ```
 
 ## RDD Interface: Examples
