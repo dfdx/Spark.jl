@@ -134,7 +134,7 @@ element by element map function
 """
 function create_map_function(f::Function)
     function func(idx, it)
-        imap(f, it)
+        (f(i) for i in it)
     end
     return func
 end
