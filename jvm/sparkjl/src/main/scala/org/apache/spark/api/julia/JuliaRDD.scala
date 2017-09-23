@@ -219,16 +219,20 @@ object JuliaRDD extends Logging {
     rdd1.cartesian(rdd2)
   }
 
-  def collectToByteArray[T](javaCollected: java.util.List[T]): Array[Byte] = {
-    val byteArrayOut = new ByteArrayOutputStream()
-    val dataStream = new DataOutputStream(byteArrayOut)
-    writeValueToStream(javaCollected, dataStream)
-    dataStream.flush()
-    byteArrayOut.toByteArray()
+  def collectToJulia(rdd: JavaRDD[Any]): Array[Byte] = {
+    writeToByteArray[java.util.List[Any]](rdd.collect())
   }
 
-  def collectToJulia(rdd: JavaRDD[Any]): Array[Byte] = {
-    collectToByteArray[Any](rdd.collect())
+  def collectToJuliaItr(rdd: JavaRDD[Any]): java.util.List[Any] = {
+    return rdd.collect()
+  }
+
+  def writeToByteArray[T](obj: Any): Array[Byte] = {
+    val byteArrayOut = new ByteArrayOutputStream()
+    val dataStream = new DataOutputStream(byteArrayOut)
+    writeValueToStream(obj, dataStream)
+    dataStream.flush()
+    byteArrayOut.toByteArray()
   }
 }
 
@@ -244,6 +248,10 @@ object JuliaPairRDD extends Logging {
     new JuliaPairRDD(rdd, command)
 
   def collectToJulia(rdd: JavaPairRDD[Any, Any]): Array[Byte] = {
-    JuliaRDD.collectToByteArray[(Any, Any)](rdd.collect())
+    JuliaRDD.writeToByteArray[java.util.List[(Any, Any)]](rdd.collect())
+  }
+
+  def collectToJuliaItr(rdd: JavaPairRDD[Any, Any]): java.util.List[(Any, Any)] = {
+    return rdd.collect()
   }
 }
