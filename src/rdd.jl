@@ -156,7 +156,7 @@ element by element flat_map function
 """
 function create_flat_map_function(f::Function)
     function func(idx, it)
-        FlatMapIterator(imap(f, it))
+        FlatMapIterator(f(i) for i in it)
     end
     return func
 end
