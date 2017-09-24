@@ -31,6 +31,25 @@ type PipelinedPairRDD <: PairRDD
     jrdd::JJuliaPairRDD
 end
 
+type RDDIterator
+    itr::JavaObject{Symbol("java.util.Iterator")}
+    l::jint
+end
+
+Base.start(x::RDDIterator) = start(x.itr)
+Base.done(x::RDDIterator, state) = done(x.itr, state)
+function Base.next(x::RDDIterator, state)
+    s = next(x.itr, state)
+    b = jcall(Spark.JJuliaRDD, "writeToByteArray", Vector{jbyte}, (JObject,), s[1])
+    b=reinterpret(Vector{UInt8}, b)
+    return readobj(IOBuffer(b))[2], true
+end
+
+Base.iteratorsize(::Type{RDDIterator}) = Base.HasLength()
+Base.length(x::RDDIterator) = x.l
+Base.iteratoreltype(::Type{RDDIterator}) = Base.EltypeUnknown()
+
+
 """
 Params:
  * parentrdd - parent RDD
@@ -134,7 +153,7 @@ element by element map function
 """
 function create_map_function(f::Function)
     function func(idx, it)
-        imap(f, it)
+        (f(i) for i in it)
     end
     return func
 end
@@ -156,7 +175,7 @@ element by element flat_map function
 """
 function create_flat_map_function(f::Function)
     function func(idx, it)
-        FlatMapIterator(imap(f, it))
+        FlatMapIterator(f(i) for i in it)
     end
     return func
 end
@@ -192,6 +211,7 @@ function reduce(rdd::RDD, f::Function)
     process_attachments(context(rdd))
     locally_reduced = map_partitions(rdd, it->reduction_function(f, it))
     subresults = collect(locally_reduced)
+    subresults = collect_itr(locally_reduced)
     return reduce(f, subresults)
 end
 
@@ -211,6 +231,8 @@ function context(rdd::RDD)
     return SparkContext(jsc)
 end
 
+"""Collects the RDD to the Julia process, by serialising all values
+via a byte array"""
 function collect_internal(rdd::RDD, static_java_class, result_class)
     process_attachments(context(rdd))
     jbyte_arr = jcall(static_java_class, "collectToJulia", Vector{jbyte},
@@ -222,11 +244,39 @@ function collect_internal(rdd::RDD, static_java_class, result_class)
     return val
 end
 
+"""Collects the RDD to the Julia process, via an Julia iterator
+that fetches each row at a time. This prevents creation of a byte
+array containing all rows at a time."""
+function collect_internal_itr(rdd::RDD, static_java_class, result_class)
+    process_attachments(context(rdd))
+    lst = jcall(static_java_class, "collectToJuliaItr", @jimport(java.util.List),
+                 (result_class,),
+                 as_java_rdd(rdd))
+    itr = jcall(lst, "iterator", @jimport(java.util.Iterator), ())
+    l = jcall(lst, "size", jint, ())
+    return RDDIterator(itr, l)
+end
+
+
 """
 Collect all elements of `rdd` on a driver machine
 """
 function collect(rdd::SingleRDD)
     collect_internal(rdd, JJuliaRDD, JJavaRDD)
+end
+
+"""
+Collect all elements of `rdd` on a driver machine
+"""
+function collect_itr(rdd::PairRDD)
+    collect_internal_itr(rdd, JJuliaPairRDD, JJavaPairRDD)
+end
+
+"""
+Collect all elements of `rdd` on a driver machine
+"""
+function collect_itr(rdd::SingleRDD)
+    collect_internal_itr(rdd, JJuliaRDD, JJavaRDD)
 end
 
 """

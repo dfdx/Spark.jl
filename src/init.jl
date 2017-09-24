@@ -57,5 +57,3 @@ function load_spark_defaults(d::Dict)
     end
     return d
 end
-
-init()

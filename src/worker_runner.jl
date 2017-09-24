@@ -5,7 +5,6 @@
 
 import Spark: readint, writeint, readobj, writeobj, load_stream, dump_stream
 import Spark: END_OF_DATA_SECTION, END_OF_STREAM, JULIA_EXCEPTION_THROWN
-using Iterators
 
 
 # if there are any attached files in the worker directory, include them

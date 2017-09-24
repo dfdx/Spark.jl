@@ -2,7 +2,6 @@
 using JavaCall
 using Compat
 import Base: map, reduce, count, collect, close
-import Iterators
 
 # config
 const JSparkConf = @jimport org.apache.spark.SparkConf
