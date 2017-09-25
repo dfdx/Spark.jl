@@ -7,12 +7,12 @@ import java.nio.file.Paths
 
 import org.apache.commons.compress.utils.Charsets
 import org.apache.spark._
-import org.apache.spark.api.java.{JavaSparkContext, JavaRDD, JavaPairRDD}
+import org.apache.spark.api.java.{JavaPairRDD, JavaRDD, JavaSparkContext}
+import org.apache.spark.internal.Logging
 import org.apache.spark.rdd.RDD
 
 import scala.collection.JavaConversions._
 import scala.language.existentials
-import org.apache.spark.internal.Logging
 import scala.reflect.ClassTag
 
 class AbstractJuliaRDD[T:ClassTag](
@@ -75,8 +75,17 @@ object JuliaRDD extends Logging {
       serverSocket = new ServerSocket(0, 1, InetAddress.getByAddress(Array(127, 0, 0, 1).map(_.toByte)))
 
       // Create and start the worker
-      val juliaPkgDir = Process("julia -e println(Pkg.dir(\"Spark\"))").!!.trim
-      val pb = new ProcessBuilder("julia", Paths.get(juliaPkgDir, "src", "worker_runner.jl").toString())
+      val juliaHome = sys.env.get("JULIA_HOME").getOrElse("")
+      val juliaVersion = sys.env.get("JULIA_VERSION").getOrElse("v0.5")
+      val juliaCommand = Paths.get(juliaHome, "julia").toString()
+      val juliaPkgDir =  sys.env.get("JULIA_PKGDIR") match {
+          case Some(i) => Paths.get(i, juliaVersion, "Spark").toString()
+          case None => Process(juliaCommand + " -e println(Pkg.dir(\"Spark\"))").!!.trim
+      }
+
+      val pb = new ProcessBuilder(juliaCommand, Paths.get(juliaPkgDir, "src", "worker_runner.jl").toString())
+
+
       pb.directory(new File(SparkFiles.getRootDirectory()))
       // val workerEnv = pb.environment()
       // workerEnv.putAll(envVars)

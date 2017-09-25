@@ -60,6 +60,10 @@
       <url>http://repo.akka.io/releases</url>
     </repository>
     <repository>
+      <id>Twitter repository</id>
+      <url>http://maven.twttr.com/</url>
+    </repository>
+    <repository>
         <id>scala</id>
         <name>Scala Tools</name>
         <url>http://scala-tools.org/repo-releases/</url>
@@ -140,9 +144,9 @@
     </dependency>
 
     <!-- additional data formats -->
-    
+
     <!-- CARBONDATA: uncomment the following dependencies to add support  -->
-    
+
     <!-- <dependency> -->
     <!--   <groupId>org.apache.carbondata</groupId> -->
     <!--   <artifactId>carbondata-parent</artifactId> -->
@@ -156,7 +160,7 @@
     <!-- </dependency> -->
 
     <!-- KUDU: uncomment the following dependencies to add support -->
-    
+
     <!-- <dependency> -->
     <!--   <groupId>org.apache.kudu</groupId> -->
     <!--   <artifactId>kudu-client</artifactId> -->
@@ -178,7 +182,8 @@
     <scala.binary.version>2.11</scala.binary.version>
 
     <spark.version>2.1.0</spark.version>
-    <hadoop.version>2.6.0</hadoop.version>
+    <hadoop.version>2.7.3</hadoop.version>
+    <yarn.version>2.7.3</yarn.version>
 
     <PermGen>64m</PermGen>
     <MaxPermGen>512m</MaxPermGen>
@@ -247,7 +252,8 @@
         </executions>
         <configuration>
           <scalaVersion>${scala.version}</scalaVersion>
-          <recompileMode>incremental</recompileMode>
+          <!--TODO fix me -->
+          <!--<recompileMode>incremental</recompileMode>-->
           <useZincServer>true</useZincServer>
           <args>
             <arg>-unchecked</arg>
