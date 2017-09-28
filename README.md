@@ -7,6 +7,8 @@ Julia interface to Apache Spark.
 
 See [Roadmap](https://github.com/dfdx/Spark.jl/issues/1) for current status.
 
+Detailed documentation is available [here](http://dfdx.github.io/Spark.jl/)
+
 ## Installation
 
 Spark.jl requires at least Java 7 and [Maven](https://maven.apache.org/) to be installed and available in `PATH`.

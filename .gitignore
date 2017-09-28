@@ -10,3 +10,6 @@ project/
 *.iml
 *.log
 nohup.out
+docs/build
+docs/site
+.DS_Store
