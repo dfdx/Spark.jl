@@ -125,7 +125,7 @@ function map_partitions_with_index(rdd::RDD, f::Function)
 end
 
 function add_index_param(f::Function)
-    function func(idx, it)        
+    function func(idx, it)
         f(it)
     end
     func
@@ -196,12 +196,26 @@ function flat_map_pair(rdd::RDD, f::Function)
     return PipelinedPairRDD(rdd, create_flat_map_function(f))
 end
 
-function create_filter_function(f::Function)
-    function func(idx, it)
-        Iterators.filter(f, it)
+if VERSION >= v"0.6.0"
+
+    function create_filter_function(f::Function)
+        function func(idx, it)
+            Iterators.filter(f, it)
+        end
+        return func
     end
-    return func
+
+else
+
+    function create_filter_function(f::Function)
+        function func(idx, it)
+            filter(f, it)
+        end
+        return func
+    end
+
 end
+
 
 Base.filter(rdd::SingleRDD, f::Function) = PipelinedRDD(rdd, create_filter_function(f))
 Base.filter(rdd::PairRDD, f::Function) = PipelinedPairRDD(rdd, create_filter_function(f))
