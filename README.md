@@ -1,24 +1,19 @@
 # Spark.jl
 
-[![Build Status](https://travis-ci.org/dfdx/Spark.jl.svg?branch=master)](https://travis-ci.org/dfdx/Spark.jl)
-[![Build status](https://ci.appveyor.com/api/projects/status/vf5w4l37icc8m35q?svg=true)](https://ci.appveyor.com/project/dfdx/spark-jl)
+A Julia interface to Apache Spark
 
-Julia interface to Apache Spark. 
+| **Documentation**                                                               | **PackageEvaluator**                                                                            | **Build Status**                                                                                |
+|:-------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------:|
+| [![][docs-latest-img]][docs-latest-url] | [![][pkg-0.5-img]][pkg-0.5-url] [![][pkg-0.6-img]][pkg-0.6-url] | [![][travis-img]][travis-url] [![][appveyor-img]][appveyor-url]  |
 
-See [Roadmap](https://github.com/dfdx/Spark.jl/issues/1) for current status.
-
-Detailed documentation is available [here](http://dfdx.github.io/Spark.jl/)
+Spark.jl is the package to allow the execution of Julia programs on the Apache Spark platform. It supports running pure Julia scripts on Julia data structures, while utilising the data and code distribution capabalities of Apache Spark. It supports multiple cluster types (in client mode), and can be consider as an analogue to PySpark or RSpark within the Julia ecosystem. 
 
 ## Installation
 
 Spark.jl requires at least Java 7 and [Maven](https://maven.apache.org/) to be installed and available in `PATH`.
 
 ```julia
-Pkg.clone("https://github.com/dfdx/Spark.jl")
-Pkg.build("Spark")
-# we also need latest master of JavaCall.jl
-Pkg.checkout("JavaCall")
-
+Pkg.add("Spark.jl")
 ```
 
 This will download and build all Julia and Java dependencies. To use Spark.jl type:
@@ -26,71 +21,43 @@ This will download and build all Julia and Java dependencies. To use Spark.jl ty
 ```julia
 using Spark
 Spark.init()
-```
-
-## RDD Interface: Examples
-
-All examples below are runnable from REPL
-
-#### Count lines in a text file
-
-```julia
 sc = SparkContext(master="local")
-path = "file:///var/log/syslog"
-txt = text_file(sc, path)
-count(txt)
-close(sc)
 ```
 
-#### Map / Reduce on Standalone master, application name
+## Documentation
 
-```julia
-sc = SparkContext(master="spark://spark-standalone:7077", appname="Say 'Hello!'")
-path = "file:///var/log/syslog"
-txt = text_file(sc, path)
-rdd = map(txt, line -> length(split(line)))
-reduce(rdd, +)
-close(sc)
-```
+- [**LATEST**][docs-latest-url] &mdash; *in-development version of the documentation.*
 
-**NOTE:** currently named Julia functions cannot be fully serialized, so functions passed to executors should be either already defined there (e.g. in preinstalled library) or be anonymous functions. 
+## Project Status
 
-#### Map partitions on Mesos and HDFS
+The package is tested against Julia `0.5`, `0.6` and Java 6 and 7. It's also been tested on Amazon EMR and Azure HDInsight. While large cluster modes have been primarily tested on Linux, OS X and Windows do work for local development. See the [roadmap][roadmap-url] for current status.
 
-```julia
-sc = SparkContext(master="mesos://mesos-master:5050")
-path = "hdfs://namenode:8020/user/hdfs/test.log"
-txt = text_file(sc, path)
-rdd = map_partitions(txt, it -> filter(line -> contains(line, "a"), it))
-collect(rdd)
-close(sc)
-```
+Contributions are very welcome, as are feature requests and suggestions. Please open an [issue][issues-url] if you encounter any problems. 
 
-For the full supported API see [the list of exported functions](https://github.com/dfdx/Spark.jl/blob/master/src/Spark.jl#L3).
+[docs-latest-img]: https://img.shields.io/badge/docs-latest-blue.svg
+[docs-latest-url]: http://dfdx.github.io/Spark.jl/
 
+[docs-stable-img]: https://img.shields.io/badge/docs-stable-blue.svg
+[docs-stable-url]: http://dfdx.github.io/Spark.jl/
 
+[travis-img]: https://travis-ci.org/dfdx/Spark.jl.svg?branch=master
+[travis-url]: https://travis-ci.org/dfdx/Spark.jl
 
-## SQL Interface: Examples
+[appveyor-img]: https://ci.appveyor.com/api/projects/status/vf5w4l37icc8m35q?svg=true
+[appveyor-url]: https://ci.appveyor.com/project/dfdx/spark-jl
 
-All examples assume that you have a file `people.json` with content like this:
+[codecov-img]: https://codecov.io/gh/dfdx/Spark.jl/branch/master/graph/badge.svg
+[codecov-url]: https://codecov.io/gh/dfdx/Spark.jl
 
-```
-{"name": "Alice", "age": 27}
-{"name": "Bob", "age": 32}
-```
+[issues-url]: https://github.com/dfdx/Spark.jl/issues
 
-Read dataframe from JSON and collect to a driver:
+[pkg-0.4-img]: http://pkg.julialang.org/badges/Spark_0.4.svg
+[pkg-0.4-url]: http://pkg.julialang.org/?pkg=Spark&ver=0.4
+[pkg-0.5-img]: http://pkg.julialang.org/badges/Spark_0.5.svg
+[pkg-0.5-url]: http://pkg.julialang.org/?pkg=Spark&ver=0.5
+[pkg-0.6-img]: http://pkg.julialang.org/badges/Spark_0.6.svg
+[pkg-0.6-url]: http://pkg.julialang.org/?pkg=Spark&ver=0.6
+[pkg-0.7-img]: http://pkg.julialang.org/badges/Spark_0.7.svg
+[pkg-0.7-url]: http://pkg.julialang.org/?pkg=Spark&ver=0.7
 
-```julia
-spark = SparkSession()
-df = read_json(spark, "/path/to/people.json")
-collect(df)
-```
-
-Read JSON and write Parquet:
-
-```julia
-spark = SparkSession()
-df = read_json(spark, "/path/to/people.json")
-write_parquet(df, "/path/to/people.parquet")
-```
+[roadmap-url]: https://github.com/dfdx/Spark.jl/issues/1
