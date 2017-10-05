@@ -30,7 +30,7 @@ sc = SparkContext(master="local")
 
 ## Project Status
 
-The package is tested against Julia `0.5`, `0.6` and Java 6 and 7. It's also been tested on Amazon EMR and Azure HDInsight. While large cluster modes have been primarily tested on Linux, OS X and Windows do work for local development. See the [roadmap][roadmap-url] for current status.
+The package is tested against Julia `0.5`, `0.6` and Java 7 and 8. It's also been tested on Amazon EMR and Azure HDInsight. While large cluster modes have been primarily tested on Linux, OS X and Windows do work for local development. See the [roadmap][roadmap-url] for current status.
 
 Contributions are very welcome, as are feature requests and suggestions. Please open an [issue][issues-url] if you encounter any problems. 
 
