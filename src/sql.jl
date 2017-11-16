@@ -108,6 +108,14 @@ function write_df(ds::Dataset, path::AbstractString=""; format=nothing, mode=not
 end
 
 
+## Row
+
+immutable Row
+    jrow::JRow
+end
+
+Row(objs...) = Row(jcall(JRowFactory, "create", JRow, (Vector{JObject},), [objs...]))
+
 
 ## main API
 
@@ -136,6 +144,7 @@ function collect(ds::Dataset)
 end
 
 
+
 function count(ds::Dataset)
     return jcall(ds.jdf, "count", jlong, ())
 end
@@ -155,5 +164,34 @@ col(name::Union{String, Symbol}) =
 function select(df::Dataset, col_names::Union{Symbol, String}...)
     col_names = [string(name) for name in col_names]
     jdf = jcall(df.jdf, "select", JDataset, (JString, Vector{JString},), col_names[1], col_names[2:end])
+    return Dataset(jdf)
+end
+
+
+## group by
+
+immutable RelationalGroupedDataset
+    jrgd::JRelationalGroupedDataset
+end
+
+
+function group_by(ds::Dataset, col_names...)
+    @assert length(col_names) > 0 "group_by requires at least one column name"
+    jrgd = jcall(ds.jdf,"groupBy", JRelationalGroupedDataset,
+                 (Vector{JColumn},), [col(col_name) for col_name in col_names])
+    return RelationalGroupedDataset(jrgd)
+end
+
+
+function count(ds::RelationalGroupedDataset)
+    return Dataset(jcall(ds.jrgd, "count", JDataset, ()))
+end
+
+
+## join
+
+function join(left::Dataset, right::Dataset, col_name)
+    jdf = jcall(left.jdf, "join", JDataset,
+                (JDataset, JString), right.jdf, col_name)
     return Dataset(jdf)
 end
