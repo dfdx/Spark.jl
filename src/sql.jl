@@ -26,10 +26,7 @@ Base.close(sess::SparkSession) = jcall(sess.jsess, "close", Void, ())
 
 ## Dataset
 
-abstract type AbstractDataset end
-
-
-immutable Dataset <: AbstractDataset
+immutable Dataset
     jdf::JDataset
 end
 
@@ -173,7 +170,7 @@ end
 
 ## group by
 
-immutable RelationalGroupedDataset <: AbstractDataset
+immutable RelationalGroupedDataset
     jrgd::JRelationalGroupedDataset
 end
 
