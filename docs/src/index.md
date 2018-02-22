@@ -12,6 +12,13 @@ Spark.jl requires at least Java 7 and Maven to be installed and available in PAT
 Pkg.add("Spark.jl")
 ```
 
+To link against a specific version of Spark, also run:
+
+```
+ENV["BUILD_SPARK_VERSION"] = "2.2.1"   # version you need
+Pkg.build("Spark")
+```
+
 ### Basic Usage
 
 The `Spark.init()` method must to called at the beginning of a session to initialise the JVM. Subsequently a `SparkContext` is created to serve as the primary reference to a Spark instance.  
