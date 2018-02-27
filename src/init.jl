@@ -48,7 +48,15 @@ function load_spark_defaults(d::Dict)
         if shome == "" ; return d; end
         sconf = joinpath(shome, "conf")
     end
-    p = split(readstring(joinpath(sconf, "spark-defaults.conf")), '\n', keep=false)
+    spark_defaults_locs = [joinpath(sconf, "spark-defaults.conf"),
+                           joinpath(sconf, "spark-defaults.conf.template")]
+    conf_idx = findfirst(isfile, spark_defaults_locs)
+    if conf_idx == 0
+        error("Can't find spark-defaults.conf, looked at: $spark_defaults_locs")
+    else
+        spark_defaults_conf = spark_defaults_locs[conf_idx]
+    end
+    p = split(readstring(spark_defaults_conf), '\n', keep=false)
     for x in p
          if !startswith(x, "#") && !isempty(strip(x))
              y=split(x, " ", limit=2)
