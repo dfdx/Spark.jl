@@ -1,22 +1,22 @@
 
-@compat abstract type RDD end
-@compat abstract type SingleRDD <: RDD end
-@compat abstract type PairRDD <: RDD end
+abstract type RDD end
+abstract type SingleRDD <: RDD end
+abstract type PairRDD <: RDD end
 
 "Pure wrapper around JavaRDD"
-type JavaRDD <: SingleRDD
+mutable struct JavaRDD <: SingleRDD
     jrdd::JJavaRDD
 end
 
 "Pure wrapper around JavaPairRDD"
-type JavaPairRDD <: PairRDD
+mutable struct JavaPairRDD <: PairRDD
     jrdd::JJavaPairRDD
 end
 
 """
 Julia type to handle RDDs. Can handle pipelining of operations to reduce interprocess IO.
 """
-type PipelinedRDD <: SingleRDD
+mutable struct PipelinedRDD <: SingleRDD
     parentrdd::RDD
     func::Function
     jrdd::JJuliaRDD
@@ -25,13 +25,13 @@ end
 """
 Julia type to handle Pair RDDs. Can handle pipelining of operations to reduce interprocess IO.
 """
-type PipelinedPairRDD <: PairRDD
+mutable struct PipelinedPairRDD <: PairRDD
     parentrdd::RDD
     func::Function
     jrdd::JJuliaPairRDD
 end
 
-type RDDIterator
+mutable struct RDDIterator
     itr::JavaObject{Symbol("java.util.Iterator")}
     l::jint
 end
@@ -196,25 +196,14 @@ function flat_map_pair(rdd::RDD, f::Function)
     return PipelinedPairRDD(rdd, create_flat_map_function(f))
 end
 
-if VERSION >= v"0.6.0"
 
-    function create_filter_function(f::Function)
-        function func(idx, it)
-            Iterators.filter(f, it)
-        end
-        return func
+function create_filter_function(f::Function)
+    function func(idx, it)
+        Iterators.filter(f, it)
     end
-
-else
-
-    function create_filter_function(f::Function)
-        function func(idx, it)
-            filter(f, it)
-        end
-        return func
-    end
-
+    return func
 end
+
 
 
 Base.filter(rdd::SingleRDD, f::Function) = PipelinedRDD(rdd, create_filter_function(f))
