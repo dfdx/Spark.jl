@@ -1,45 +1,32 @@
 
 
 "Iterates over the iterators within an iterator"
-immutable FlatMapIterator{I}
+struct FlatMapIterator{I}
     it::I
 end
 
-Base.eltype{I}(::Type{FlatMapIterator{I}}) = eltype(eltype(I))
-Base.iteratorsize{I}(::Type{FlatMapIterator{I}}) = Base.SizeUnknown()
-Base.iteratoreltype{I}(::Type{FlatMapIterator{I}}) = _flatteneltype(I, Base.iteratoreltype(I))
-_flatteneltype(I, ::Base.HasEltype) = Base.iteratoreltype(eltype(I))
+Base.eltype(::Type{FlatMapIterator{I}}) where {I} = eltype(eltype(I))
+Base.IteratorSize(::Type{FlatMapIterator{I}}) where {I} = Base.SizeUnknown()
+Base.IteratorEltype(::Type{FlatMapIterator{I}}) where {I} = _flatteneltype(I, Base.IteratorEltype(I))
+_flatteneltype(I, ::Base.HasEltype) = Base.IteratorEltype(eltype(I))
 _flatteneltype(I, et) = Base.EltypeUnknown()
 
-function Base.start(f::FlatMapIterator)
-    local inner, s2
-    s = start(f.it)
-    d = done(f.it, s)
-    d && return nothing
-    done_inner = false
-    while !d
-        inner, s = next(f.it, s)
-        s2 = start(inner)
-        done_inner = done(inner, s2)
-        !done_inner && break
-        d = done(f.it, s)
+function Base.iterate(f::FlatMapIterator, state=((), nothing, nothing))
+    state_outer, inner, next_inner = state
+    if next_inner != nothing
+        value_inner, state_inner = next_inner
+        return value_inner, (state_outer, inner, iterate(inner, state_inner))
     end
-    return (d & done_inner), s, inner, s2
-end
 
-@inline function Base.next(f::FlatMapIterator, state::NTuple{4,Any})
-    _done, s, inner, s2 = state
-    val, s2 = next(inner, s2)
-    done_inner = done_outer = false
-    while (done_inner=done(inner, s2)) && !(done_outer=done(f.it, s))
-        inner, s = next(f.it, s)
-        s2 = start(inner)
+    next_outer = iterate(f.it, state_outer...)
+    while next_outer != nothing
+        inner, state_outer = next_outer
+        next_inner = iterate(inner)
+        if next_inner != nothing
+            value_inner, state_inner = next_inner
+            return value_inner, (state_outer, inner, iterate(inner, state_inner))
+        end
+        next_outer = iterate(f.it, state_outer)
     end
-    return val, ((done_inner & done_outer), s, inner, s2)
-end
-
-Base.done(f::FlatMapIterator, state::Void) = true
-
-@inline function Base.done(f::FlatMapIterator, state)
-    return state[1]
+    return nothing
 end

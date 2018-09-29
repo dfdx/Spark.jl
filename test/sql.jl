@@ -1,3 +1,6 @@
+using Pkg
+
+@testset "sql" begin
 
 sess = SparkSession()
 
@@ -11,3 +14,5 @@ mktempdir() do dir
 end    
 
 close(sess)
+
+end

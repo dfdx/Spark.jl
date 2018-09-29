@@ -1,3 +1,5 @@
+@testset "map" begin
+
 # test of map function
 
 sc = SparkContext(master="local")
@@ -10,3 +12,4 @@ values = collect(mappedRdd)
 
 close(sc)
 
+end

@@ -1,3 +1,4 @@
+using Sockets: connect
 
 # Script to launch Julia worker process
 # NOTE: this file should be run as a standalone script so that all included definitions
@@ -9,13 +10,13 @@ import Spark: END_OF_DATA_SECTION, END_OF_STREAM, JULIA_EXCEPTION_THROWN
 
 # if there are any attached files in the worker directory, include them
 for filename in readdir()
-    if ismatch(r"attached_.{8}\.jl", filename)
+    if occursin(r"attached_.{8}\.jl", filename)
         include(joinpath(pwd(), filename))
     end
 end
 
 function main()
-    port = parse(Int, readline(STDIN))
+    port = parse(Int, readline(stdin))
     sock = connect("127.0.0.1", port)
     try
         split = readint(sock)
@@ -29,8 +30,8 @@ function main()
         io = IOBuffer()
         Base.show_backtrace(io, catch_backtrace())
         seekstart(io)
-        bt = readstring(io)
-        info(bt)
+        bt = read(io, String)
+        @info(bt)
         writeint(sock, JULIA_EXCEPTION_THROWN)
         writeobj(sock, string(e) * bt)
     end

@@ -12,22 +12,22 @@ function init()
     else
         JavaCall.addClassPath(joinpath(dirname(@__FILE__), "..", "jvm", "sparkjl", "target", "sparkjl-0.1-assembly.jar"))
     end
-    for y in split(get(ENV, "SPARK_DIST_CLASSPATH", ""), [':',';'], keep=false)
+    for y in split(get(ENV, "SPARK_DIST_CLASSPATH", ""), [':',';'], keepempty=false)
         JavaCall.addClassPath(String(y))
     end
-    for z in split(get(defaults, "spark.driver.extraClassPath", ""), [':',';'], keep=false)
+    for z in split(get(defaults, "spark.driver.extraClassPath", ""), [':',';'], keepempty=false)
         JavaCall.addClassPath(String(z))
     end
     JavaCall.addClassPath(get(ENV, "HADOOP_CONF_DIR", ""))
     JavaCall.addClassPath(get(ENV, "YARN_CONF_DIR", ""))
     if get(ENV, "HDP_VERSION", "") == ""
        try
-           ENV["HDP_VERSION"] = pipeline(`hdp-select status` , `grep spark2-client` , `awk -F " " '{print $3}'`) |> readstring |> strip
+           ENV["HDP_VERSION"] = pipeline(`hdp-select status` , `grep spark2-client` , `awk -F " " '{print $3}'`) |> (cmd -> read(cmd, String)) |> strip
        catch
        end
     end
 
-    for y in split(get(defaults, "spark.driver.extraJavaOptions", ""), " ", keep=false)
+    for y in split(get(defaults, "spark.driver.extraJavaOptions", ""), " ", keepempty=false)
         JavaCall.addOpts(String(y))
     end
     s = get(defaults, "spark.driver.extraLibraryPath", "")
@@ -38,6 +38,8 @@ function init()
     JavaCall.addOpts("-Xmx1024M")
     try
         JavaCall.init()
+    catch
+        # ?
     end
 end
 
@@ -56,7 +58,7 @@ function load_spark_defaults(d::Dict)
     else
         spark_defaults_conf = spark_defaults_locs[conf_idx]
     end
-    p = split(readstring(spark_defaults_conf), '\n', keep=false)
+    p = split(read(spark_defaults_conf, String), '\n', keepempty=false)
     for x in p
          if !startswith(x, "#") && !isempty(strip(x))
              y=split(x, " ", limit=2)

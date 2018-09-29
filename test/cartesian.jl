@@ -1,3 +1,5 @@
+@testset "cartesian" begin
+
 # test of cartesian
 sc = SparkContext(master="local")
 
@@ -10,3 +12,4 @@ rdd2 = map(rdd, it-> it[1] + it[2])
 
 close(sc)
 
+end

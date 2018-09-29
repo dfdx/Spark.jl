@@ -1,3 +1,4 @@
+using Serialization
 
 const ATTACHMENT_BUFFER = Ref{Vector{Expr}}(Expr[])
 const LAST_ATTACHMENT_IDX = Ref{Int}(0)
@@ -8,15 +9,15 @@ clear_attachments!() = ATTACHMENT_BUFFER[] = Expr[]
 
 function generate_temp_filename(prefix::AbstractString, suffix::AbstractString)
     LAST_ATTACHMENT_IDX[] = LAST_ATTACHMENT_IDX[] + 1
-    attachment_idx = @sprintf "%08d" LAST_ATTACHMENT_IDX[]
+    attachment_idx = lpad(LAST_ATTACHMENT_IDX[], 8, '0')
     prefix * attachment_idx * suffix
 end
 
 function convert_to_uri(path::AbstractString)
     # add_file wants URI format in order to work in local mode
     # and it does seem to work unless we have three slashes at the statr
-    if is_windows()
-        "file:///" * replace(path, r"\\", s"/")
+    if Sys.iswindows()
+        "file:///" * replace(path, '\\' => '/')
     elseif startswith(path, "/")
         # absolute path
         "file://" * path
@@ -59,6 +60,7 @@ function share_variable(sc::SparkContext, name::Symbol, data::Any)
     end
     add_file(sc, convert_to_uri(path))
     ex = quote
+            using Serialization
             open($temp_filename, "r") do io
                 global $name = deserialize(io)
             end
