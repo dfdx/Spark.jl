@@ -13,3 +13,6 @@ nohup.out
 docs/build
 docs/site
 .DS_Store
+
+Project.toml
+Manifest.toml

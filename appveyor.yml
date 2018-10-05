@@ -1,8 +1,21 @@
 environment:
-  HADOOP_HOME: C:\projects\hadoop
   matrix:
-  - JULIA_URL: "https://julialang-s3.julialang.org/bin/winnt/x64/0.6/julia-0.6-latest-win64.exe"
-    JAVA_HOME: C:\Program Files\Java\jdk1.7.0\  
+  - julia_version: 0.7
+  - julia_version: 1
+  - julia_version: nightly
+
+platform:
+  - x86 # 32-bit
+  - x64 # 64-bit
+
+matrix:
+  allow_failures:
+  - julia_version: nightly
+
+branches:
+  only:
+    - master
+    - /release-.*/
 
 notifications:
   - provider: Email
@@ -10,31 +23,19 @@ notifications:
     on_build_failure: false
     on_build_status_changed: false
 
-os: Windows Server 2012
-
 install:
-  - ps: "[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12"
-# Download most recent Julia Windows binary
-  - ps: (new-object net.webclient).DownloadFile(
-        $env:JULIA_URL,
-        "C:\projects\julia-binary.exe")
-        
-#install hadoop winutils
-  - cmd: md C:\projects\hadoop
-  - cmd: md C:\projects\hadoop\bin
-  - ps: (new-object System.Net.WebClient).DownloadFile(
-        "https://github.com/steveloughran/winutils/blob/master/hadoop-2.6.0/bin/winutils.exe?raw=true", 
-        "C:\projects\hadoop\bin\winutils.exe")
-
-# Run installer silently, output to C:\projects\julia
-  - C:\projects\julia-binary.exe /S /D=C:\projects\julia
+  - ps: iex ((new-object net.webclient).DownloadString("https://raw.githubusercontent.com/JuliaCI/Appveyor.jl/version-1/bin/install.ps1"))
 
 build_script:
-# Need to convert from shallow to complete for Pkg.clone to work
-  - IF EXIST .git\shallow (git fetch --unshallow)
-  - C:\projects\julia\bin\julia -e "versioninfo();
-      Pkg.clone(pwd(), \"Spark\"); Pkg.build(\"Spark\")"
+  - echo "%JL_BUILD_SCRIPT%"
+  - C:\julia\bin\julia -e "%JL_BUILD_SCRIPT%"
 
 test_script:
-  - C:\projects\julia\bin\julia --check-bounds=yes -e "Pkg.test(\"Spark\")"
+  - echo "%JL_TEST_SCRIPT%"
+  - C:\julia\bin\julia -e "%JL_TEST_SCRIPT%"
 
+# # Uncomment to support code coverage upload. Should only be enabled for packages
+# # which would have coverage gaps without running on Windows
+# on_success:
+#   - echo "%JL_CODECOV_SCRIPT%"
+#   - C:\julia\bin\julia -e "%JL_CODECOV_SCRIPT%"

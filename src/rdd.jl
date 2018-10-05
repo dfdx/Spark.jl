@@ -170,23 +170,14 @@ function map_pair(rdd::RDD, f::Function)
     return PipelinedPairRDD(rdd, create_map_function(f))
 end
 
-"""
-creates a function that operates on a partition from an
-element by element flat_map function
-"""
-function create_flat_map_function(f::Function)
-    function func(idx, it)
-        FlatMapIterator(f(i) for i in it)
-    end
-    return func
-end
 
 """
 Similar to `map`, but each input item can be mapped to 0 or more
 output items (so `f` should return an iterator rather than a single item)
 """
 function flat_map(rdd::RDD, f::Function)
-    return PipelinedRDD(rdd, create_flat_map_function(f))
+    # return PipelinedRDD(rdd, create_flat_map_function(f))
+    return PipelinedRDD(rdd, (idx, it) -> Iterators.flatten(Iterators.map(f, it)))
 end
 
 """

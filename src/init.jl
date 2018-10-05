@@ -36,11 +36,7 @@ function init()
     catch; end
     JavaCall.addOpts("-ea")
     JavaCall.addOpts("-Xmx1024M")
-    try
-        JavaCall.init()
-    catch
-        # ?
-    end
+    JavaCall.init()
 end
 
 function load_spark_defaults(d::Dict)

@@ -80,7 +80,8 @@ object JuliaRDD extends Logging {
       val juliaCommand = Paths.get(juliaHome, "julia").toString()
       val juliaPkgDir =  sys.env.get("JULIA_PKGDIR") match {
           case Some(i) => Paths.get(i, juliaVersion, "Spark").toString()
-          case None => Process(juliaCommand + " -e println(abspath(joinpath(Base.find_package(\"Spark\"),\"../..\")))").!!.trim
+          case None => Process(juliaCommand +
+            " -e println(dirname(dirname(Base.find_package(\"Spark\"))))").!!.trim
       }
 
       val pb = new ProcessBuilder(juliaCommand, Paths.get(juliaPkgDir, "src", "worker_runner.jl").toString())
@@ -100,7 +101,7 @@ object JuliaRDD extends Logging {
       out.flush()
 
       // Wait for it to connect to our socket
-      serverSocket.setSoTimeout(50000)
+      serverSocket.setSoTimeout(120000)
       try {
         val socket = serverSocket.accept()
         // workers.put(socket, worker)

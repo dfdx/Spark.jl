@@ -1,6 +1,7 @@
 
 using JavaCall
 import Base: map, reduce, count, collect, close
+import Base.Iterators
 
 # config
 const JSparkConf = @jimport org.apache.spark.SparkConf
@@ -39,7 +40,6 @@ include("serialization.jl")
 include("config.jl")
 include("context.jl")
 include("sql.jl")
-include("flat_map_iterator.jl")
 include("rdd.jl")
 include("attach.jl")
 include("worker.jl")
