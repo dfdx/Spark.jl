@@ -13,3 +13,8 @@ nohup.out
 docs/build
 docs/site
 .DS_Store
+
+deps/hadoop
+
+Project.toml
+Manifest.toml

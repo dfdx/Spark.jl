@@ -1,4 +1,4 @@
-
+using Serialization
 ## 1. Julia-only serialization. Use it for technical data (e.g. functions, codes, etc.)
 
 "Return serialized object as an array of bytes"

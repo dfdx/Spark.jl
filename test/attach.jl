@@ -1,3 +1,5 @@
+@testset "attach" begin
+
 # tests the attach macro
 @attach a = 2
 @attach include("attach_include.jl")
@@ -10,3 +12,5 @@ rdd = map_partitions(txt, it -> map(func_from_include, it))
 @test reduce(rdd, +) == 14
 
 close(sc)
+
+end

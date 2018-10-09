@@ -36,18 +36,19 @@ mutable struct RDDIterator
     l::jint
 end
 
-Base.start(x::RDDIterator) = start(x.itr)
-Base.done(x::RDDIterator, state) = done(x.itr, state)
-function Base.next(x::RDDIterator, state)
-    s = next(x.itr, state)
-    b = jcall(Spark.JJuliaRDD, "writeToByteArray", Vector{jbyte}, (JObject,), s[1])
+function Base.iterate(x::RDDIterator, state=iterate(x.itr) )
+    if state == nothing
+        return nothing
+    end
+    value, itr_state = state
+    b = jcall(Spark.JJuliaRDD, "writeToByteArray", Vector{jbyte}, (JObject,), value)
     b=reinterpret(Vector{UInt8}, b)
-    return readobj(IOBuffer(b))[2], true
+    return readobj(IOBuffer(b))[2], iterate(x.itr, itr_state)
 end
 
-Base.iteratorsize(::Type{RDDIterator}) = Base.HasLength()
+Base.IteratorSize(::Type{RDDIterator}) = Base.HasLength()
 Base.length(x::RDDIterator) = x.l
-Base.iteratoreltype(::Type{RDDIterator}) = Base.EltypeUnknown()
+Base.IteratorEltype(::Type{RDDIterator}) = Base.EltypeUnknown()
 
 
 """
@@ -169,23 +170,14 @@ function map_pair(rdd::RDD, f::Function)
     return PipelinedPairRDD(rdd, create_map_function(f))
 end
 
-"""
-creates a function that operates on a partition from an
-element by element flat_map function
-"""
-function create_flat_map_function(f::Function)
-    function func(idx, it)
-        FlatMapIterator(f(i) for i in it)
-    end
-    return func
-end
 
 """
 Similar to `map`, but each input item can be mapped to 0 or more
 output items (so `f` should return an iterator rather than a single item)
 """
 function flat_map(rdd::RDD, f::Function)
-    return PipelinedRDD(rdd, create_flat_map_function(f))
+    # return PipelinedRDD(rdd, create_flat_map_function(f))
+    return PipelinedRDD(rdd, (idx, it) -> Iterators.flatten(Iterators.map(f, it)))
 end
 
 """
@@ -322,14 +314,14 @@ function group_by_key(rdd::PairRDD)
 end
 
 """Return a new RDD that has exactly num_partitions partitions."""
-function repartition{T<:RDD}(rdd::T, num_partitions::Integer)
+function repartition(rdd::T, num_partitions::Integer) where {T<:RDD}
     (Tjr, Tr) = (T <: PairRDD) ? (JJavaPairRDD, JavaPairRDD) : (JJavaRDD, JavaRDD)
     jrdd = jcall(as_java_rdd(rdd), "repartition", Tjr, (jint,), num_partitions)
     return Tr(jrdd)
 end
 
 """Return a new RDD that is reduced into num_partitions partitions."""
-function coalesce{T<:RDD}(rdd::T, num_partitions::Integer; shuffle::Union{Void,Bool}=nothing)
+function coalesce(rdd::T, num_partitions::Integer; shuffle::Union{Nothing,Bool}=nothing) where {T<:RDD}
     (Tjr, Tr) = (T <: PairRDD) ? (JJavaPairRDD, JavaPairRDD) : (JJavaRDD, JavaRDD)
     if shuffle === nothing
         jrdd = jcall(as_java_rdd(rdd), "coalesce", Tjr, (jint,), num_partitions)

@@ -62,7 +62,7 @@ function writeobj(io::IO, obj::Tuple{Any,Any})
 end
 
 function writeobj(io::IO, str::AbstractString)
-    utf8 = convert(Vector{UInt8}, str)
+    utf8 = Vector(transcode(UInt8, str))
     writeint(io, STRING_START - length(utf8))
     write(io, utf8)
 end

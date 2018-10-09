@@ -1,3 +1,5 @@
+@testset "reduce_by_key" begin
+
 # test of group_by_key
 sc = SparkContext(master="local")
 
@@ -9,3 +11,5 @@ rdd3 = map(rdd2, it -> it[1] + it[2])
 @test reduce(rdd3, +) == 15
 
 close(sc)
+
+end

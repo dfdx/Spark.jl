@@ -1,3 +1,5 @@
+@testset "map_pair" begin
+
 # test of map_pair
 sc = SparkContext(master="local")
 
@@ -8,3 +10,5 @@ values = collect(pairs)
 @test values == [(1,1), (2,1), (3,1)]
 
 close(sc)
+
+end

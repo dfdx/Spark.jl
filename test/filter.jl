@@ -1,3 +1,5 @@
+@testset "filter" begin
+
 # test filter
 sc = SparkContext(master="local")
 
@@ -15,3 +17,5 @@ pn3 = filter(pnums1, x->(x[1]<15 && x[2]>5))
 @test count(pn3) == 350
 
 close(sc)
+
+end

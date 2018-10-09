@@ -1,5 +1,5 @@
-mvn = is_windows() ? "mvn.cmd" : "mvn"
-which = is_windows() ? "where" : "which"
+mvn = Sys.iswindows() ? "mvn.cmd" : "mvn"
+which = Sys.iswindows() ? "where" : "which"
 
 try
     run(`$which $mvn`)
@@ -9,6 +9,6 @@ end
 
 SPARK_VERSION = get(ENV, "BUILD_SPARK_VERSION", "2.1.0")
 
-cd("../jvm/sparkjl")
-run(`$mvn clean package -Dspark.version=$SPARK_VERSION`)
-
+cd(joinpath(dirname(@__DIR__), "jvm/sparkjl")) do
+    run(`$mvn clean package -Dspark.version=$SPARK_VERSION`)
+end

@@ -2,9 +2,14 @@ language: julia
 os:
   - linux
 julia:
-  - 0.6
+  - 0.7
+  - 1.0
 notifications:
   email: false
+
+before_install:
+  - sudo apt-get install -y maven
+
 # uncomment the following lines to override the default test script
 #script:
 # - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi

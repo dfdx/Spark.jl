@@ -1,3 +1,5 @@
+@testset "collect_pair" begin
+
 # test of collect on pair rdds
 
 sc = SparkContext(master="local")
@@ -10,3 +12,5 @@ values = collect(pairs)
 @test values == [(1,11), (1,12), (2, 11), (2, 12)]
 
 close(sc)
+
+end

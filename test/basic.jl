@@ -1,3 +1,5 @@
+@testset "basic" begin
+
 # test of basic funtionality
 
 #tests for config set/get
@@ -14,3 +16,5 @@ rdd = map_partitions(txt, it -> map(s -> length(s), it))
 @test reduce(rdd, +) == 10
 
 close(sc)
+
+end

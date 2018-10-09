@@ -1,3 +1,5 @@
+@testset "reduce" begin
+
 # test of reduce with no map stage
 sc = SparkContext(master="local")
 txt = parallelize(sc, ["hello", "world"])
@@ -6,3 +8,4 @@ txt = parallelize(sc, ["hello", "world"])
 
 close(sc)
 
+end

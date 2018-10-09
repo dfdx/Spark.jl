@@ -1,5 +1,5 @@
 
-type SparkConf
+mutable struct SparkConf
     jconf::JSparkConf
 end
 

@@ -3,7 +3,7 @@
 
 ## SparkSession
 
-immutable SparkSession
+struct SparkSession
     jsess::JSparkSession
 end
 
@@ -21,17 +21,17 @@ function SparkSession(;master="local",
 end
 
 Base.show(io::IO, sess::SparkSession) = print(io, "SparkSession(...)")
-Base.close(sess::SparkSession) = jcall(sess.jsess, "close", Void, ())
+Base.close(sess::SparkSession) = jcall(sess.jsess, "close", Nothing, ())
 
 
 ## Dataset
 
-immutable Dataset
+struct Dataset
     jdf::JDataset
 end
 
 
-Base.show(io::IO, ds::Dataset) = jcall(ds.jdf, "show", Void, ())
+Base.show(io::IO, ds::Dataset) = jcall(ds.jdf, "show", Nothing, ())
 
 
 ## IO formats
@@ -54,7 +54,7 @@ end
 
 function write_json(ds::Dataset, path::AbstractString)
     jwriter = dataframe_writer(ds)
-    jcall(jwriter, "json", Void, (JString,), path)
+    jcall(jwriter, "json", Nothing, (JString,), path)
 end
 
 
@@ -68,7 +68,7 @@ end
 
 function write_parquet(ds::Dataset, path::AbstractString)
     jwriter = dataframe_writer(ds)
-    jcall(jwriter, "parquet", Void, (JString,), path)
+    jcall(jwriter, "parquet", Nothing, (JString,), path)
 end
 
 
@@ -101,16 +101,16 @@ function write_df(ds::Dataset, path::AbstractString=""; format=nothing, mode=not
         jwriter = jcall(jwriter, "option", JDataFrameWriter, (JString, JString), string(k), v)
     end
     if path != ""
-        jcall(jwriter, "save", Void, (JString,), path)
+        jcall(jwriter, "save", Nothing, (JString,), path)
     else
-        jcall(jwriter, "save", Void, (JString,))
+        jcall(jwriter, "save", Nothing, (JString,))
     end
 end
 
 
 ## Row
 
-immutable Row
+struct Row
     jrow::JRow
 end
 
@@ -138,7 +138,7 @@ function collect(ds::Dataset)
     data = Array{Any}(0)
     for jrow in JavaCall.iterator(jrows)
         arr = [native_type(narrow(jrow[i])) for i=1:length(jrow)]
-        push!(data, (arr...))
+        push!(data, (arr...,))
     end
     return data
 end
@@ -170,7 +170,7 @@ end
 
 ## group by
 
-immutable RelationalGroupedDataset
+struct RelationalGroupedDataset
     jrgd::JRelationalGroupedDataset
 end
 

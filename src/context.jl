@@ -1,6 +1,6 @@
 
 "Wrapper around JavaSparkContext"
-type SparkContext
+mutable struct SparkContext
     jsc::JJavaSparkContext
     master::AbstractString
     appname::AbstractString
@@ -50,20 +50,20 @@ end
 
 "Close SparkContext"
 function close(sc::SparkContext)
-    jcall(sc.jsc, "close", Void, ())
+    jcall(sc.jsc, "close", Nothing, ())
 end
 
 
 "Add JAR file to SparkContext. Classes from this JAR will then be available to all tasks"
 function add_jar(sc::SparkContext, path::AbstractString)
-    jrdd = jcall(sc.jsc, "addJar", Void, (JString,), path)
+    jrdd = jcall(sc.jsc, "addJar", Nothing, (JString,), path)
 end
 
 
 "Add file to SparkContext. This file will be downloaded to each executor's work directory"
 function add_file(sc::SparkContext, path::AbstractString)
     # isfile(path) || error("File `$path` doesn't exist")
-    jrdd = jcall(sc.jsc, "addFile", Void, (JString,), path)
+    jrdd = jcall(sc.jsc, "addFile", Nothing, (JString,), path)
 end
 
 
