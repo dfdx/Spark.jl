@@ -5,6 +5,8 @@
 
 struct SparkSession
     jsess::JSparkSession
+    master::AbstractString
+    appname::AbstractString
 end
 
 function SparkSession(;master="local",
@@ -17,12 +19,18 @@ function SparkSession(;master="local",
         jcall(jbuilder, "config", JSparkSessionBuilder, (JString, JString), key, value)
     end
     jsess = jcall(jbuilder, "getOrCreate", JSparkSession, ())
-    return SparkSession(jsess)
+    return SparkSession(jsess, master, appname)
 end
 
-Base.show(io::IO, sess::SparkSession) = print(io, "SparkSession(...)")
+Base.show(io::IO, sess::SparkSession) = print(io, "SparkSession($(sess.master),$(sess.appname))")
 Base.close(sess::SparkSession) = jcall(sess.jsess, "close", Nothing, ())
 
+function context(sess::SparkSession)
+    ssc = jcall(sess.jsess, "sparkContext", JSparkContext, ())
+    jsc = jcall(JJavaSparkContext, "fromSparkContext",
+                JJavaSparkContext, (JSparkContext,), ssc)
+    return SparkContext(jsc)
+end
 
 ## Dataset
 
@@ -84,7 +92,7 @@ function read_df(sess::SparkSession, path::AbstractString=""; format=nothing, op
     end
     jds = path != "" ?
         jcall(jreader, "load", JDataset, (JString,), path) :
-        jcall(jreader, "load", JDataset, (JString,))
+        jcall(jreader, "load", JDataset, ())
     return Dataset(jds)
 end
 
