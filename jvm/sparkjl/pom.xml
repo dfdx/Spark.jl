@@ -76,6 +76,13 @@
     </repository>
   </repositories>
   <dependencies>
+    <!-- NOTE: Adding the com.fasterxml.jackson.module dependency first ensures
+         that the version of the module would match -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.module</groupId>
+      <artifactId>jackson-module-scala_${scala.binary.version}</artifactId>
+      <version>2.7.9</version>
+    </dependency>
     <!-- NOTE: Adding the hadoop dependency first ensures
          that we pull in protobuf from Hadoop before Spark -->
     <dependency>
