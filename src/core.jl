@@ -10,6 +10,7 @@ const JSparkContext = @jimport org.apache.spark.SparkContext
 const JJavaSparkContext = @jimport org.apache.spark.api.java.JavaSparkContext
 # SQL
 const JSparkSession = @jimport org.apache.spark.sql.SparkSession
+const JStructType = @jimport org.apache.spark.sql.types.StructType
 const JSparkSessionBuilder = @jimport org.apache.spark.sql.SparkSession$Builder
 const JDataFrameReader = @jimport org.apache.spark.sql.DataFrameReader
 const JDataFrameWriter = @jimport org.apache.spark.sql.DataFrameWriter

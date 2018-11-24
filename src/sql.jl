@@ -19,7 +19,10 @@ function SparkSession(;master="local",
         jcall(jbuilder, "config", JSparkSessionBuilder, (JString, JString), key, value)
     end
     jsess = jcall(jbuilder, "getOrCreate", JSparkSession, ())
-    return SparkSession(jsess, master, appname)
+    sess = SparkSession(jsess, master, appname)
+    sc = context(sess)
+    add_jar(sc, joinpath(dirname(@__FILE__), "..", "jvm", "sparkjl", "target", "sparkjl-0.1.jar"))
+    return sess
 end
 
 Base.show(io::IO, sess::SparkSession) = print(io, "SparkSession($(sess.master),$(sess.appname))")
@@ -39,7 +42,12 @@ struct Dataset
 end
 
 
-Base.show(io::IO, ds::Dataset) = jcall(ds.jdf, "show", Nothing, ())
+Base.show(io::IO, ds::Dataset) = print(io, "Dataset($(schemaString(ds)))")
+function schemaString(ds::Dataset)
+    jschema = jcall(ds.jdf, "schema", JStructType, ())
+    jcall(jschema, "simpleString", JString, ())
+end
+show(ds::Dataset) = jcall(ds.jdf, "show", Nothing, ())
 
 
 ## IO formats
