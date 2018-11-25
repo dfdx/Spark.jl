@@ -42,12 +42,12 @@ struct Dataset
 end
 
 
-Base.show(io::IO, ds::Dataset) = print(io, "Dataset($(schemaString(ds)))")
-function schemaString(ds::Dataset)
+function schema_string(ds::Dataset)
     jschema = jcall(ds.jdf, "schema", JStructType, ())
     jcall(jschema, "simpleString", JString, ())
 end
 show(ds::Dataset) = jcall(ds.jdf, "show", Nothing, ())
+Base.show(io::IO, ds::Dataset) = print(io, "Dataset($(schema_string(ds)))")
 
 
 ## IO formats
@@ -151,7 +151,7 @@ Base.getindex(jrow::JGenericRow, i::Integer) = jcall(jrow, "get", JObject, (jint
 
 function collect(ds::Dataset)
     jrows = jcall(ds.jdf, "collectAsList", JList, ())
-    data = Array{Any}(0)
+    data = Array{Any}(nothing, 0)
     for jrow in JavaCall.iterator(jrows)
         arr = [native_type(narrow(jrow[i])) for i=1:length(jrow)]
         push!(data, (arr...,))
