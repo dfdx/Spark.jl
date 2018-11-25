@@ -369,3 +369,18 @@ function pipe(rdd::RDD, command::Vector{String}, env::Dict{String,String})
     jrdd = jcall(as_java_rdd(rdd), "pipe", JJavaRDD, (JList,JMap), convert(JArrayList, command, JString), convert(JHashMap, JString, JString, env))
     return JavaRDD(jrdd)
 end
+
+
+# more Julian versions of the functions above
+
+map_partitions_with_index(f::Function, rdd::RDD) = map_partitions_with_index(rdd, f)
+map_partitions(f::Function, rdd::RDD) = map_partitions(rdd, f)
+map_partitions_pair(f::Function, rdd::RDD) = map_partitions_pair(rdd, f)
+Base.map(f::Function, rdd::RDD) = map(rdd, f)
+map_pair(f::Function, rdd::RDD) = map_pair(rdd, f)
+flat_map(f::Function, rdd::RDD) = flat_map(rdd, f)
+flat_map_pair(f::Function, rdd::RDD) = flat_map_pair(f, rdd)
+Base.filter(f::Function, rdd::SingleRDD) = filter(rdd, f)
+Base.filter(f::Function, rdd::PairRDD) = filter(rdd, f)
+Base.reduce(f::Function, rdd::RDD) = reduce(rdd, f)
+reduce_by_key(f::Function, rdd::RDD) = reduce_by_key(rdd, f)
