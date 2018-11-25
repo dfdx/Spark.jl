@@ -5,6 +5,8 @@
 
 struct SparkSession
     jsess::JSparkSession
+    master::AbstractString
+    appname::AbstractString
 end
 
 function SparkSession(;master="local",
@@ -17,12 +19,21 @@ function SparkSession(;master="local",
         jcall(jbuilder, "config", JSparkSessionBuilder, (JString, JString), key, value)
     end
     jsess = jcall(jbuilder, "getOrCreate", JSparkSession, ())
-    return SparkSession(jsess)
+    sess = SparkSession(jsess, master, appname)
+    sc = context(sess)
+    add_jar(sc, joinpath(dirname(@__FILE__), "..", "jvm", "sparkjl", "target", "sparkjl-0.1.jar"))
+    return sess
 end
 
-Base.show(io::IO, sess::SparkSession) = print(io, "SparkSession(...)")
+Base.show(io::IO, sess::SparkSession) = print(io, "SparkSession($(sess.master),$(sess.appname))")
 Base.close(sess::SparkSession) = jcall(sess.jsess, "close", Nothing, ())
 
+function context(sess::SparkSession)
+    ssc = jcall(sess.jsess, "sparkContext", JSparkContext, ())
+    jsc = jcall(JJavaSparkContext, "fromSparkContext",
+                JJavaSparkContext, (JSparkContext,), ssc)
+    return SparkContext(jsc)
+end
 
 ## Dataset
 
@@ -31,7 +42,12 @@ struct Dataset
 end
 
 
-Base.show(io::IO, ds::Dataset) = jcall(ds.jdf, "show", Nothing, ())
+function schema_string(ds::Dataset)
+    jschema = jcall(ds.jdf, "schema", JStructType, ())
+    jcall(jschema, "simpleString", JString, ())
+end
+show(ds::Dataset) = jcall(ds.jdf, "show", Nothing, ())
+Base.show(io::IO, ds::Dataset) = print(io, "Dataset($(schema_string(ds)))")
 
 
 ## IO formats
@@ -84,7 +100,7 @@ function read_df(sess::SparkSession, path::AbstractString=""; format=nothing, op
     end
     jds = path != "" ?
         jcall(jreader, "load", JDataset, (JString,), path) :
-        jcall(jreader, "load", JDataset, (JString,))
+        jcall(jreader, "load", JDataset, ())
     return Dataset(jds)
 end
 
@@ -135,7 +151,7 @@ Base.getindex(jrow::JGenericRow, i::Integer) = jcall(jrow, "get", JObject, (jint
 
 function collect(ds::Dataset)
     jrows = jcall(ds.jdf, "collectAsList", JList, ())
-    data = Array{Any}(0)
+    data = Array{Any}(nothing, 0)
     for jrow in JavaCall.iterator(jrows)
         arr = [native_type(narrow(jrow[i])) for i=1:length(jrow)]
         push!(data, (arr...,))
