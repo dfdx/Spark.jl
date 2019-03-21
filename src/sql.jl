@@ -10,11 +10,15 @@ struct SparkSession
 end
 
 function SparkSession(;master="local",
-                      appname="Julia App on Spark",
-                      config=Dict{String, String}())
+                      appname="Julia App on Spark",                      
+                      config=Dict{String, String}(),
+                      enable_hive_support=false,)
     jbuilder = jcall(JSparkSession, "builder", JSparkSessionBuilder, ())
     jcall(jbuilder, "master", JSparkSessionBuilder, (JString,), master)
     jcall(jbuilder, "appName", JSparkSessionBuilder, (JString,), appname)
+    if enable_hive_support
+        jcall(jbuilder, "enableHiveSupport", JSparkSessionBuilder, ())
+    end
     for (key, value) in config
         jcall(jbuilder, "config", JSparkSessionBuilder, (JString, JString), key, value)
     end

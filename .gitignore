@@ -15,6 +15,7 @@ docs/site
 .DS_Store
 
 deps/hadoop
+metastore_db/
 
 Project.toml
 Manifest.toml
