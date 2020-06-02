@@ -2,10 +2,14 @@ language: julia
 os:
   - linux
 julia:
-  - 0.7
   - 1.0
+  - 1.4
+  - nightly
 notifications:
   email: false
+matrix:
+  allow_failures:
+    - julia: nightly
 
 before_install:
   - sudo apt-get install -y maven
