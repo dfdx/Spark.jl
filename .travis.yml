@@ -1,6 +1,10 @@
+dist: bionic
 language: julia
 os:
   - linux
+env:
+  - JAVA_HOME=/usr/local/lib/jvm/openjdk8
+  - JAVA_HOME=/usr/local/lib/jvm/openjdk11
 julia:
   - 1.0
   - 1.4
@@ -8,8 +12,18 @@ julia:
 notifications:
   email: false
 matrix:
+  exclude:
+  - julia: 1.4
+    env: JAVA_HOME=/usr/local/lib/jvm/openjdk11
+  - julia: nightly
+    env: JAVA_HOME=/usr/local/lib/jvm/openjdk11
   allow_failures:
     - julia: nightly
+
+branches:
+  only:
+    - master
+    - /release-.*/
 
 before_install:
   - sudo apt-get install -y maven
