@@ -12,6 +12,11 @@ julia:
 notifications:
   email: false
 matrix:
+  exclude:
+  - julia: 1.4
+    env: JAVA_HOME=/usr/local/lib/jvm/openjdk11
+  - julia: nightly
+    env: JAVA_HOME=/usr/local/lib/jvm/openjdk11
   allow_failures:
     - julia: nightly
 
