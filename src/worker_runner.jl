@@ -22,7 +22,7 @@ function main()
         split = readint(sock)
         func = readobj(sock)[2]
         itc = load_stream(sock)             # return chain representing partition iterator
-        dump_stream(sock, func(split, itc))
+        dump_stream(sock, Base.invokelatest(func,split, itc))
         writeint(sock, END_OF_DATA_SECTION)
         writeint(sock, END_OF_STREAM)
     catch e

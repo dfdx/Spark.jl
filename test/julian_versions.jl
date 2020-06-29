@@ -14,7 +14,7 @@
     @test (map_partitions(rdd, f) |> collect ==
            map_partitions(f, rdd) |> collect)
 
-    f = prt -> ((x, 1) for x in prt)
+    f = prt -> Base.invokelatest((x, 1) for x in prt)
     @test (map_partitions_pair(rdd, f) |> collect ==
            map_partitions_pair(f, rdd) |> collect)
 

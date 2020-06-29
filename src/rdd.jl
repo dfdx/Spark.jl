@@ -1,3 +1,4 @@
+import Base: invokelatest
 
 abstract type RDD end
 abstract type SingleRDD <: RDD end
@@ -102,7 +103,7 @@ Base.show(io::IO, rdd::PipelinedPairRDD) = print(io, "PipelinedPairRDD($(rdd.par
 " chain 2 partion functions together "
 function chain_function(parent_func, child_func)
     function pipelined_func(split, iterator)
-        return child_func(split, parent_func(split, iterator))
+        return invokelatest(child_func,split, invokelatest(parent_func, split, iterator))
     end
     pipelined_func
 end
@@ -127,7 +128,7 @@ end
 
 function add_index_param(f::Function)
     function func(idx, it)
-        f(it)
+        invokelatest(f,it)
     end
     func
 end
@@ -154,7 +155,7 @@ element by element map function
 """
 function create_map_function(f::Function)
     function func(idx, it)
-        (f(i) for i in it)
+        (invokelatest(f,i) for i in it)
     end
     return func
 end
@@ -177,7 +178,7 @@ output items (so `f` should return an iterator rather than a single item)
 """
 function flat_map(rdd::RDD, f::Function)
     # return PipelinedRDD(rdd, create_flat_map_function(f))
-    return PipelinedRDD(rdd, (idx, it) -> Iterators.flatten(Iterators.map(f, it)))
+    return PipelinedRDD(rdd, (idx, it) -> Iterators.flatten(Iterators.map(x->invokelatest(f,x), it)))
 end
 
 """
@@ -191,7 +192,7 @@ end
 
 function create_filter_function(f::Function)
     function func(idx, it)
-        Iterators.filter(f, it)
+        Iterators.filter(x->invokelatest(f,x), it)
     end
     return func
 end
@@ -212,7 +213,7 @@ end
 
 function reduction_function(f, it)
     try
-        return [reduce(f, it)]
+        return [reduce((x,y)->invokelatest(f,x,y), it)]
     catch
         return []
     end
@@ -384,3 +385,6 @@ Base.filter(f::Function, rdd::SingleRDD) = filter(rdd, f)
 Base.filter(f::Function, rdd::PairRDD) = filter(rdd, f)
 Base.reduce(f::Function, rdd::RDD) = reduce(rdd, f)
 reduce_by_key(f::Function, rdd::RDD) = reduce_by_key(rdd, f)
+
+LatestGenerator(f,iters...) =  Base.Generator(x->invokelatest(f,x),iters...)
+invokelatest(g::Base.Generator) =  Base.Generator(x->invokelatest(g.f,x),g.iter)
