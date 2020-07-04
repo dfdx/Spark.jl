@@ -1,5 +1,6 @@
 name = "Spark"
 uuid = "e3819d11-95af-5eea-9727-70c091663a01"
+version = "0.5.0"
 
 [deps]
 JavaCall = "494afd89-becb-516b-aafa-70d2670c0337"
