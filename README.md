@@ -2,9 +2,11 @@
 
 A Julia interface to Apache Spark™
 
-| **Documentation**                                                               | **PackageEvaluator**                                                                            | **Build Status**                                                                                |
-|:-------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------:|
-| [![][docs-latest-img]][docs-latest-url] | [![][pkg-0.5-img]][pkg-0.5-url] [![][pkg-0.6-img]][pkg-0.6-url] | [![][travis-img]][travis-url] [![][appveyor-img]][appveyor-url]  |
+| **Latest Version** | **Documentation** | **PackageEvaluator** | **Build Status** |
+|:------------------:|:-----------------:|:--------------------:|:----------------:|
+| [![][version-img]][version-url] | [![][docs-latest-img]][docs-latest-url] | [![PkgEval][pkgeval-img]][pkgeval-url]  | [![][travis-img]][travis-url] [![][appveyor-img]][appveyor-url]  |
+
+
 
 Spark.jl is a package that allows the execution of Julia programs on the Apache Spark platform. It supports running pure Julia scripts on Julia data structures, while utilising the data and code distribution capabalities of Apache Spark. It supports multiple cluster types (in client mode), and can be consider as an analogue to PySpark or RSpark within the Julia ecosystem. 
 
@@ -30,7 +32,7 @@ sc = SparkContext(master="local")
 
 ## Project Status
 
-The package is tested against Julia `0.5`, `0.6` and Java 7 and 8. It's also been tested on Amazon EMR and Azure HDInsight. While large cluster modes have been primarily tested on Linux, OS X and Windows do work for local development. See the [roadmap][roadmap-url] for current status.
+The package is tested against Julia `1.0`, `1.4` and Java 8 and 11. It's also been tested on Amazon EMR and Azure HDInsight. While large cluster modes have been primarily tested on Linux, OS X and Windows do work for local development. See the [roadmap][roadmap-url] for current status.
 
 Contributions are very welcome, as are feature requests and suggestions. Please open an [issue][issues-url] if you encounter any problems. 
 
@@ -55,13 +57,10 @@ Apache®, [Apache Spark and Spark](http://spark.apache.org) are registered trade
 
 [issues-url]: https://github.com/dfdx/Spark.jl/issues
 
-[pkg-0.4-img]: http://pkg.julialang.org/badges/Spark_0.4.svg
-[pkg-0.4-url]: http://pkg.julialang.org/?pkg=Spark&ver=0.4
-[pkg-0.5-img]: http://pkg.julialang.org/badges/Spark_0.5.svg
-[pkg-0.5-url]: http://pkg.julialang.org/?pkg=Spark&ver=0.5
-[pkg-0.6-img]: http://pkg.julialang.org/badges/Spark_0.6.svg
-[pkg-0.6-url]: http://pkg.julialang.org/?pkg=Spark&ver=0.6
-[pkg-0.7-img]: http://pkg.julialang.org/badges/Spark_0.7.svg
-[pkg-0.7-url]: http://pkg.julialang.org/?pkg=Spark&ver=0.7
+[pkgeval-img]: https://juliahub.com/docs/Spark/pkgeval.svg
+[pkgeval-url]: https://juliahub.com/ui/Packages/Spark/zpJEw
+
+[version-img]: https://juliahub.com/docs/Spark/version.svg
+[version-url]: https://juliahub.com/ui/Packages/Spark/zpJEw
 
 [roadmap-url]: https://github.com/dfdx/Spark.jl/issues/1
