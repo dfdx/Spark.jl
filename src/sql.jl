@@ -172,12 +172,26 @@ function sql(sess::SparkSession, str::AbstractString)
 end
 
 
-col(name::Union{String, Symbol}) =
+create_temp_view(ds::Dataset, str::AbstractString) =
+    jcall(ds.jdf, "createTempView", Nothing, (JString,), str)
+
+
+create_or_replace_temp_view(ds::Dataset, str::AbstractString) =
+    jcall(ds.jdf, "createOrReplaceTempView", Nothing, (JString,), str)
+
+
+col(name::Union{String,Symbol}) =
     jcall(JSQLFunctions, "col", JColumn, (JString,), string(name))
 
 
+function describe(ds::Dataset, col_names::Union{Symbol,String}...)
+    col_names = [string(name) for name in col_names]
+    jdf = jcall(ds.jdf, "describe", JDataset, (Vector{JString},), col_names[1:end])
+    return Dataset(jdf)
+end
 
-function select(df::Dataset, col_names::Union{Symbol, String}...)
+
+function select(df::Dataset, col_names::Union{Symbol,String}...)
     col_names = [string(name) for name in col_names]
     jdf = jcall(df.jdf, "select", JDataset, (JString, Vector{JString},), col_names[1], col_names[2:end])
     return Dataset(jdf)
