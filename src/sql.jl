@@ -49,6 +49,15 @@ end
 show(ds::Dataset) = jcall(ds.jdf, "show", Nothing, ())
 Base.show(io::IO, ds::Dataset) = print(io, "Dataset($(schema_string(ds)))")
 
+function Base.names(ds::Dataset)
+    jschema = jcall(ds.jdf, "schema", Spark.JStructType, ())
+    jnames = jcall(jschema, "fieldNames", Array{JavaObject{Symbol("java.lang.String")},1}, ())
+
+    names = unsafe_string.(jnames)
+
+    return names
+end
+
 
 ## IO formats
 
@@ -131,6 +140,16 @@ struct Row
 end
 
 Row(objs...) = Row(jcall(JRowFactory, "create", JRow, (Vector{JObject},), [objs...]))
+
+
+function Base.names(row::Row)
+    jschema = jcall(row.jrow, "schema", Spark.JStructType, ())
+    jnames = jcall(jschema, "fieldNames", Array{JavaObject{Symbol("java.lang.String")},1}, ())
+
+    names = unsafe_string.(jnames)
+
+    return names
+end
 
 
 ## main API
