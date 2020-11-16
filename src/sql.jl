@@ -228,6 +228,11 @@ function describe(ds::Dataset, col_names::Union{Symbol,String}...)
     return Dataset(jdf)
 end
 
+function head(ds::Dataset)
+    jrow = convert(JRow, jcall(ds.jdf, "head", JObject, ()))
+    return Row(jrow)
+end
+
 
 function select(df::Dataset, col_names::Union{Symbol,String}...)
     col_names = [string(name) for name in col_names]
