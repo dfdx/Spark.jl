@@ -148,6 +148,9 @@ Base.length(jrow::JGenericRow) = jcall(jrow, "length", jint, ())
 # NOTE: getindex starts indexing from 1
 Base.getindex(jrow::JGenericRow, i::Integer) = jcall(jrow, "get", JObject, (jint,), i-1)
 
+Base.length(jrow::JRow) = jcall(jrow, "length", jint, ())
+# NOTE: getindex starts indexing from 1
+Base.getindex(jrow::JRow, i::Integer) = jcall(jrow, "get", JObject, (jint,), i - 1)
 
 function collect(ds::Dataset)
     jrows = jcall(ds.jdf, "collectAsList", JList, ())
