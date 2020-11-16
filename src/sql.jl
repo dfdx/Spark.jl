@@ -152,6 +152,17 @@ function Base.names(row::Row)
 end
 
 
+function as_named_tuple(row, colnames)
+    values = [native_type(narrow(row.jrow[i])) for i = 1:length(row.jrow)]
+    return (; zip(colnames, values)...,)
+end
+
+function as_named_tuple(row)
+    colnames = Symbol.(Base.names(row))
+    return as_named_tuple(row, colnames)
+end
+
+
 ## main API
 
 native_type(obj::JavaObject{Symbol("java.lang.Long")}) = jcall(obj, "longValue", jlong, ())
