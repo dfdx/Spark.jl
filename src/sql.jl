@@ -1,6 +1,9 @@
 
 ## sql.jl - wrappers for Spark SQL / DataFrame / Dataset capabilities
 
+using TableTraits
+using IteratorInterfaceExtensions
+
 ## SparkSession
 
 struct SparkSession
@@ -42,12 +45,84 @@ struct Dataset
 end
 
 
+struct DatasetIterator{T}
+    itr::JavaObject{Symbol("java.util.Iterator")}
+    l::Int64
+end
+
+IteratorInterfaceExtensions.isiterable(x::Dataset) = true
+TableTraits.isiterabletable(x::Dataset) = true
+
+type_map = Dict(
+    "LongType"    => Int64,
+    "IntegerType" => Int32,
+    "DoubleType"  => Float64,
+    "FloatType"   => Float32,
+    "BooleanType" => UInt8,
+    "StringType"  => String,
+    "ObjectType"  => JObject
+)
+
+function mapped_type(x::String) 
+    if x in keys(type_map)
+        return type_map[x]
+    end
+
+    return Any
+end
+
+
+function TableTraits.getiterator(ds::Dataset)
+    jtypes = jcall(ds.jdf, "dtypes", Vector{JavaObject{Symbol("scala.Tuple2")}}, ())
+
+    mnames = Symbol.(unsafe_string.(map(x -> convert(JString, jcall(x, "_1", JObject, ())), jtypes)))
+    mtypes = mapped_type.(unsafe_string.(map(x -> convert(JString, jcall(x, "_2", JObject, ())), jtypes)))
+
+    T = NamedTuple{Tuple(mnames),Tuple{mtypes...}}
+    
+    jit = jcall(ds.jdf, "toLocalIterator", JavaObject{Symbol("java.util.Iterator")}, ())
+
+    l = count(ds)
+
+    return DatasetIterator{T}(jit, l)
+end
+
+Base.IteratorSize(::Type{DatasetIterator{T}}) where {T} = Base.HasLength()
+Base.length(x::DatasetIterator{T}) where {T} = x.l
+Base.IteratorEltype(::Type{DatasetIterator{T}}) where {T} = T
+
+
+function Base.eltype(iter::DatasetIterator{T}) where {T}
+    return T
+end
+
+Base.eltype(::Type{DatasetIterator{T}}) where {T} = T
+
+
+function Base.iterate(iter::DatasetIterator{T}, state=1) where {T}
+    if Bool(jcall(iter.itr, "hasNext", jboolean, ()))
+        jrow = convert(JRow, jcall(iter.itr, "next", JObject, ()))
+        return as_named_tuple(Row(jrow)), state + 1
+    end
+
+    return nothing
+end
+
 function schema_string(ds::Dataset)
     jschema = jcall(ds.jdf, "schema", JStructType, ())
     jcall(jschema, "simpleString", JString, ())
 end
 show(ds::Dataset) = jcall(ds.jdf, "show", Nothing, ())
 Base.show(io::IO, ds::Dataset) = print(io, "Dataset($(schema_string(ds)))")
+
+function Base.names(ds::Dataset)
+    jschema = jcall(ds.jdf, "schema", Spark.JStructType, ())
+    jnames = jcall(jschema, "fieldNames", Array{JavaObject{Symbol("java.lang.String")},1}, ())
+
+    names = unsafe_string.(jnames)
+
+    return names
+end
 
 
 ## IO formats
@@ -133,6 +208,27 @@ end
 Row(objs...) = Row(jcall(JRowFactory, "create", JRow, (Vector{JObject},), [objs...]))
 
 
+function Base.names(row::Row)
+    jschema = jcall(row.jrow, "schema", Spark.JStructType, ())
+    jnames = jcall(jschema, "fieldNames", Array{JavaObject{Symbol("java.lang.String")},1}, ())
+
+    names = unsafe_string.(jnames)
+
+    return names
+end
+
+
+function as_named_tuple(row, colnames)
+    values = [native_type(narrow(row.jrow[i])) for i = 1:length(row.jrow)]
+    return (; zip(colnames, values)...,)
+end
+
+function as_named_tuple(row)
+    colnames = Symbol.(Base.names(row))
+    return as_named_tuple(row, colnames)
+end
+
+
 ## main API
 
 native_type(obj::JavaObject{Symbol("java.lang.Long")}) = jcall(obj, "longValue", jlong, ())
@@ -148,6 +244,14 @@ Base.length(jrow::JGenericRow) = jcall(jrow, "length", jint, ())
 # NOTE: getindex starts indexing from 1
 Base.getindex(jrow::JGenericRow, i::Integer) = jcall(jrow, "get", JObject, (jint,), i-1)
 
+Base.length(jrow::JRow) = jcall(jrow, "length", jint, ())
+# NOTE: getindex starts indexing from 1
+Base.getindex(jrow::JRow, i::Integer) = jcall(jrow, "get", JObject, (jint,), i - 1)
+
+function cache(ds::Dataset)
+    jds = jcall(ds.jdf, "cache", JDataset, ())
+    return Dataset(jds)
+end
 
 function collect(ds::Dataset)
     jrows = jcall(ds.jdf, "collectAsList", JList, ())
@@ -172,12 +276,31 @@ function sql(sess::SparkSession, str::AbstractString)
 end
 
 
-col(name::Union{String, Symbol}) =
+create_temp_view(ds::Dataset, str::AbstractString) =
+    jcall(ds.jdf, "createTempView", Nothing, (JString,), str)
+
+
+create_or_replace_temp_view(ds::Dataset, str::AbstractString) =
+    jcall(ds.jdf, "createOrReplaceTempView", Nothing, (JString,), str)
+
+
+col(name::Union{String,Symbol}) =
     jcall(JSQLFunctions, "col", JColumn, (JString,), string(name))
 
 
+function describe(ds::Dataset, col_names::Union{Symbol,String}...)
+    col_names = [string(name) for name in col_names]
+    jdf = jcall(ds.jdf, "describe", JDataset, (Vector{JString},), col_names[1:end])
+    return Dataset(jdf)
+end
 
-function select(df::Dataset, col_names::Union{Symbol, String}...)
+function head(ds::Dataset)
+    jrow = convert(JRow, jcall(ds.jdf, "head", JObject, ()))
+    return Row(jrow)
+end
+
+
+function select(df::Dataset, col_names::Union{Symbol,String}...)
     col_names = [string(name) for name in col_names]
     jdf = jcall(df.jdf, "select", JDataset, (JString, Vector{JString},), col_names[1], col_names[2:end])
     return Dataset(jdf)

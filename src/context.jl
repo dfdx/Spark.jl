@@ -91,3 +91,7 @@ function parallelize(sc::SparkContext, coll; n_split::Int=-1)
     rm(tmp_path)
     JavaRDD(jrdd)
 end
+
+function set_log_level(sc::SparkContext, level::AbstractString)
+    jcall(sc.jsc, "setLogLevel", Nothing, (JString,), level)
+end
