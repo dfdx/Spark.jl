@@ -1,6 +1,9 @@
 
 ## sql.jl - wrappers for Spark SQL / DataFrame / Dataset capabilities
 
+using TableTraits
+using IteratorInterfaceExtensions
+
 ## SparkSession
 
 struct SparkSession
@@ -41,6 +44,69 @@ struct Dataset
     jdf::JDataset
 end
 
+
+struct DatasetIterator{T}
+    itr::JavaObject{Symbol("java.util.Iterator")}
+    l::Int64
+end
+
+IteratorInterfaceExtensions.isiterable(x::Dataset) = true
+TableTraits.isiterabletable(x::Dataset) = true
+
+type_map = Dict(
+    "LongType"    => Int64,
+    "IntegerType" => Int32,
+    "DoubleType"  => Float64,
+    "FloatType"   => Float32,
+    "BooleanType" => UInt8,
+    "StringType"  => String,
+    "ObjectType"  => JObject
+)
+
+function mapped_type(x::String) 
+    if x in keys(type_map)
+        return type_map[x]
+    end
+
+    return Any
+end
+
+
+function TableTraits.getiterator(ds::Dataset)
+    jtypes = jcall(ds.jdf, "dtypes", Vector{JavaObject{Symbol("scala.Tuple2")}}, ())
+
+    mnames = Symbol.(unsafe_string.(map(x -> convert(JString, jcall(x, "_1", JObject, ())), jtypes)))
+    mtypes = mapped_type.(unsafe_string.(map(x -> convert(JString, jcall(x, "_2", JObject, ())), jtypes)))
+
+    T = NamedTuple{Tuple(mnames),Tuple{mtypes...}}
+    
+    jit = jcall(ds.jdf, "toLocalIterator", JavaObject{Symbol("java.util.Iterator")}, ())
+
+    l = count(ds)
+
+    return DatasetIterator{T}(jit, l)
+end
+
+Base.IteratorSize(::Type{DatasetIterator{T}}) where {T} = Base.HasLength()
+Base.length(x::DatasetIterator{T}) where {T} = x.l
+Base.IteratorEltype(::Type{DatasetIterator{T}}) where {T} = T
+
+
+function Base.eltype(iter::DatasetIterator{T}) where {T}
+    return T
+end
+
+Base.eltype(::Type{DatasetIterator{T}}) where {T} = T
+
+
+function Base.iterate(iter::DatasetIterator{T}, state=1) where {T}
+    if Bool(jcall(iter.itr, "hasNext", jboolean, ()))
+        jrow = convert(JRow, jcall(iter.itr, "next", JObject, ()))
+        return as_named_tuple(Row(jrow)), state + 1
+    end
+
+    return nothing
+end
 
 function schema_string(ds::Dataset)
     jschema = jcall(ds.jdf, "schema", JStructType, ())
