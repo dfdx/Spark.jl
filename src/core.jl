@@ -35,6 +35,7 @@ const JList = @jimport java.util.List
 const JMap = @jimport java.util.Map
 const JArrayList = @jimport java.util.ArrayList
 const JHashMap = @jimport java.util.HashMap
+const JSystem = @jimport java.lang.System
 
 include("init.jl")
 include("serialization.jl")

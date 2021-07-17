@@ -37,6 +37,15 @@ function init()
     JavaCall.addOpts("-ea")
     JavaCall.addOpts("-Xmx1024M")
     JavaCall.init()
+
+    validateJavaVersion()
+end
+
+function validateJavaVersion()
+    version::String = jcall(JSystem, "getProperty", JString, (JString,), "java.version")
+    if !startswith(version, "1.8")
+        @warn "Java 1.8 is recommended for Spark.jl, but Java $version was used."
+    end
 end
 
 function load_spark_defaults(d::Dict)
