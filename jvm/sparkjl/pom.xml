@@ -81,7 +81,7 @@
     <dependency>
       <groupId>com.fasterxml.jackson.module</groupId>
       <artifactId>jackson-module-scala_${scala.binary.version}</artifactId>
-      <version>2.7.9</version>
+      <version>2.12.4</version>
     </dependency>
     <!-- NOTE: Adding the hadoop dependency first ensures
          that we pull in protobuf from Hadoop before Spark -->
@@ -100,6 +100,10 @@
         </exclusion>
         <exclusion>
           <groupId>org.codehaus.jackson</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.core</groupId>
           <artifactId>*</artifactId>
         </exclusion>
         <exclusion>
@@ -188,7 +192,7 @@
     <scala.version>2.12.11</scala.version>
     <scala.binary.version>2.12</scala.binary.version>
 
-    <spark.version>[2.4.6,)</spark.version>
+    <spark.version>[2.4.6,3.1.1]</spark.version>
     <hadoop.version>2.7.3</hadoop.version>
     <yarn.version>2.7.3</yarn.version>
 
