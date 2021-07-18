@@ -1,6 +1,6 @@
 name = "Spark"
 uuid = "e3819d11-95af-5eea-9727-70c091663a01"
-version = "0.5.0"
+version = "0.5.1"
 
 [deps]
 IteratorInterfaceExtensions = "82899510-4779-5014-852e-03e436cf321d"
@@ -11,11 +11,11 @@ TableTraits = "3783bdb8-4a98-5b6b-af9a-565f29a5fe9c"
 
 [compat]
 JavaCall = "≥ 0.7.1"
-julia = "1.0"
+julia = "1"
 
 [extras]
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
 test = ["Test", "DataFrames"]

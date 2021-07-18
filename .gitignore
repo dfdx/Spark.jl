@@ -17,3 +17,6 @@ docs/site
 deps/hadoop
 
 Manifest.toml
+
+# hidden files
+_*
