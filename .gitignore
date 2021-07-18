@@ -13,6 +13,10 @@ nohup.out
 docs/build
 docs/site
 .DS_Store
+.classpath
+.project
+.settings/
+.vscode/
 
 deps/hadoop
 
