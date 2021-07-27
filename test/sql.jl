@@ -67,7 +67,7 @@ describe_df = DataFrame(complexdata) |> create_df(sess) |> Spark.describe |> col
 @test describe_df.a[2] == "5000.0"
 
 @test Spark.range(sess, 0, 888) |> Spark.limit(20) |> count == 20
-@test sql(sess, "select 1 as a, array(1) as b") |> Spark.head == (a=1, b=[2])
+@test sql(sess, "select 1 as a, array(1) as b") |> Spark.head == (a=1, b=[Int32(1)])
 
 close(sess)
 

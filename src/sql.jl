@@ -350,11 +350,11 @@ julia> Spark.range(sess, 0, 888) |> Spark.limit(20) |> count
 20
 ```
 """
-function limit(ds::Dataset, count::Int32)
+function limit(ds::Dataset, count::Integer)
     jds = jcall(ds.jdf, "limit", JDataset, (jint,), count)
     Dataset(jds)
 end
-limit(count::Int32) = ds -> limit(ds, count)
+limit(count::Integer) = ds -> limit(ds, count)
 
 
 """
@@ -474,6 +474,7 @@ function head(ds::Dataset)
         error("Dataset $ds is empty")
     else
         row[1]
+    end
 end
 
 
