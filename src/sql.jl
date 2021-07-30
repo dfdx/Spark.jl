@@ -315,11 +315,14 @@ function collect_to_dataframe(ds::Dataset)
     collect_to_arrow(ds) |> DataFrame
 end
 
-"""Returns an Arrow.Table that contains all rows in this Dataset."""
+"""Returns an Arrow.Table that contains all rows in this Dataset.
+   This function will be slightly faster than collect_to_dataframe so it should be preferred
+   if DataFrame features are not needed."""
 function collect_to_arrow(ds::Dataset)
-    arrowBytes = jcall(JDatasetUtils, "collectToArrow", Vector{jbyte}, (JDataset,), ds.jdf)
-    arrowBytes = reinterpret(Vector{UInt8}, arrowBytes)
-    Arrow.Table(arrowBytes)
+    mktemp() do path,io
+        jcall(JDatasetUtils, "collectToArrow", Nothing, (JDataset,JString), ds.jdf, path)
+        Arrow.Table(path)
+    end
 end
 
 "Returns the logical plans of the Dataset. Mode may be simple, extended, codegen, cost, or formatted"
@@ -411,10 +414,10 @@ Dataset(struct<a:bigint,b:string>)
 ```
 """
 function create_df(sess::SparkSession, table)
-    buff = IOBuffer()
-    Arrow.write(buff, table)
-    buffReintr = reinterpret(Vector{jbyte}, buff.data)
-    Dataset(jcall(JDatasetUtils, "fromArrow", JDataset, (JSparkSession,Vector{jbyte}), sess.jsess, buffReintr))
+    mktemp() do path,io
+        Arrow.write(path, table; file=false)
+        Dataset(jcall(JDatasetUtils, "fromArrow", JDataset, (JSparkSession,JString), sess.jsess, path))
+    end
 end
 
 create_df(sess::SparkSession) = table -> create_df(sess, table)
