@@ -73,6 +73,16 @@ function mapped_type(x::String)
     return Any
 end
 
+"""
+Returns array of tuples with the types of the columns
+```
+julia> Spark.dtypes(df)
+3-element Vector{NamedTuple{(:name, :type), Tuple{String, String}}}:
+ (name = "a", type = "StringType")
+ (name = "b", type = "StringType")
+ (name = "c", type = "DoubleType")
+```
+"""
 function dtypes(ds::Dataset)
     jtypes = jcall(ds.jdf, "dtypes", Vector{JavaObject{Symbol("scala.Tuple2")}}, ())
 
@@ -120,11 +130,13 @@ function Base.iterate(iter::DatasetIterator{T}, state=1) where {T}
     return nothing
 end
 
+"Returns schema of the Dataset in the DDL format. For example, it may be used to set schema of subsequent read_df operation."
 function schema_ddl(ds::Dataset)
     jschema = jcall(ds.jdf, "schema", JStructType, ())
     jcall(jschema, "toDDL", JString, ())
 end
 
+"Returns schema of the Dataset in a user readable format."
 function schema_string(ds::Dataset)
     jschema = jcall(ds.jdf, "schema", JStructType, ())
     jcall(jschema, "simpleString", JString, ())
@@ -134,12 +146,7 @@ show(ds::Dataset; numRows:: Int=20, truncate:: Bool=true) =
 Base.show(io::IO, ds::Dataset) = print(io, "Dataset($(schema_string(ds)))")
 
 function Base.names(ds::Dataset)
-    jschema = jcall(ds.jdf, "schema", Spark.JStructType, ())
-    jnames = jcall(jschema, "fieldNames", Array{JavaObject{Symbol("java.lang.String")},1}, ())
-
-    names = unsafe_string.(jnames)
-
-    return names
+    getfield.(dtypes(ds), :name)
 end
 
 
@@ -182,7 +189,16 @@ end
 
 
 # generic dataframe reader/writer
+"""
+Reads data into Spark Data DataFrame
 
+```
+julia> df = read_df(sess, "./stops.txt"; format="csv", options=Dict("inferSchema" => true, "header" => true))
+Dataset(struct<stop_id:string,stop_name:string,stop_lat:double,stop_lon:double>)
+julia> Spark.count(df)
+13339
+```
+"""
 function read_df(sess::SparkSession, path::AbstractString="";
     format=nothing,
     schema=nothing,
@@ -273,6 +289,7 @@ Base.length(jrow::JRow) = jcall(jrow, "length", jint, ())
 # NOTE: getindex starts indexing from 1
 Base.getindex(jrow::JRow, i::Integer) = jcall(jrow, "get", JObject, (jint,), i - 1)
 
+"Caches the Dataset in storage so it's not recomputed on each use"
 function cache(ds::Dataset)
     jds = jcall(ds.jdf, "cache", JDataset, ())
     return Dataset(jds)
@@ -310,7 +327,7 @@ function collect_to_tuples(ds::Dataset)
     collect_to_arrow(ds) |> Tables.rowtable
 end
 
-"""Returns a DataFrame that contains all rows in this Dataset."""
+"""Returns a DataFrame from DataFrames.jl that contains all rows in this Dataset."""
 function collect_to_dataframe(ds::Dataset)
     collect_to_arrow(ds) |> DataFrame
 end
@@ -398,6 +415,14 @@ function range(sess::SparkSession, start::Int, stop::Int; step::Int=1, num_parti
     end
 end
 
+"""
+References a Spark table
+
+```
+julia> create_temp_view(df, "mytable")
+julia> table(sess, "mytable")
+```
+"""
 function table(sess::SparkSession, name::AbstractString)
     Dataset(jcall(sess.jsess, "table", JDataset, (JString,), name))
 end
@@ -461,7 +486,21 @@ create_or_replace_temp_view(str::AbstractString) =
 col(name::Union{String,Symbol}) =
     jcall(JSQLFunctions, "col", JColumn, (JString,), string(name))
 
-
+"""
+# Example
+```
+julia> collect_to_dataframe(Spark.describe(df, "lon", "lat"))
+5×3 DataFrame
+ Row │ summary  lon                 lat            
+     │ String?  String?             String?             
+─────┼──────────────────────────────────────────────────
+   1 │ count    13339               13339
+   2 │ mean     14.451034183971766  50.03984631006847
+   3 │ stddev   0.3419928578550804  0.19177661599129373
+   4 │ min      13.38806            49.00785
+   5 │ max      15.57627            50.58883
+```
+"""
 function describe(ds::Dataset, col_names::Union{Symbol,String}...)
     col_names = [string(name) for name in col_names]
     jdf = jcall(ds.jdf, "describe", JDataset, (Vector{JString},), col_names[1:end])
@@ -481,6 +520,11 @@ function head(ds::Dataset)
 end
 
 
+"""
+Selects specified columns from the dataset
+julia> Spark.select(df, "lon", "lat")
+Dataset(struct<lon:double,lat:double>)
+"""
 function select(df::Dataset, col_names::Union{Symbol,String}...)
     col_names = [string(name) for name in col_names]
     jdf = jcall(df.jdf, "select", JDataset, (JString, Vector{JString},), col_names[1], col_names[2:end])
