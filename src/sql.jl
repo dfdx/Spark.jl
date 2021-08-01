@@ -559,3 +559,8 @@ function join(left::Dataset, right::Dataset, col_name)
                 (JDataset, JString), right.jdf, col_name)
     return Dataset(jdf)
 end
+
+
+function allow_experimental_udfs(sess::SparkSession)
+    jcall(JDatasetUtils, "addExperimentalUdfs", Nothing, (JSparkSession,), sess.jsess)
+end
