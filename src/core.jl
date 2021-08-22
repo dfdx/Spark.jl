@@ -29,6 +29,7 @@ const JJuliaRDD = @jimport org.apache.spark.api.julia.JuliaRDD
 const JJuliaPairRDD = @jimport org.apache.spark.api.julia.JuliaPairRDD
 # utils
 const JRDDUtils = @jimport org.apache.spark.api.julia.RDDUtils
+const JDatasetUtils = @jimport org.apache.spark.sql.julia.DatasetUtils
 # Java utils
 const JIterator = @jimport java.util.Iterator
 const JList = @jimport java.util.List

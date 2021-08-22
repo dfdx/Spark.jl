@@ -192,7 +192,7 @@
     <scala.version>2.12.11</scala.version>
     <scala.binary.version>2.12</scala.binary.version>
 
-    <spark.version>[2.4.6,3.1.1]</spark.version>
+    <spark.version>[3.0.0,3.1.1]</spark.version>
     <hadoop.version>2.7.3</hadoop.version>
     <yarn.version>2.7.3</yarn.version>
 

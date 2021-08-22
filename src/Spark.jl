@@ -16,6 +16,9 @@ export
     reduce,
     filter,
     collect,
+    collect_to_arrow,
+    collect_to_tuples,
+    collect_to_dataframe,
     count,
     id,
     num_partitions,
@@ -41,7 +44,14 @@ export
     read_parquet,
     write_parquet,
     read_df,
-    write_df
+    write_df,
+    checkpoint,
+    local_checkpoint,
+    to_json,
+    explain,
+    create_df,
+    create_or_replace_temp_view,
+    create_temp_view
     
     
 

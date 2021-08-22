@@ -36,6 +36,7 @@ function init()
     catch; end
     JavaCall.addOpts("-ea")
     JavaCall.addOpts("-Xmx1024M")
+    JavaCall.addOpts("--illegal-access=warn")
     JavaCall.init()
 
     validateJavaVersion()

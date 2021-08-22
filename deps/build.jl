@@ -7,7 +7,7 @@ catch
     error("Cannot find maven. Is it installed?")
 end
 
-SPARK_VERSION = get(ENV, "BUILD_SPARK_VERSION", "2.4.6")
+SPARK_VERSION = get(ENV, "BUILD_SPARK_VERSION", "3.1.1")
 SCALA_VERSION = get(ENV, "BUILD_SCALA_VERSION", "2.12.11")
 SCALA_BINARY_VERSION = match(r"^\d+\.\d+", SCALA_VERSION).match
 

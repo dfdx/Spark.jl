@@ -3,6 +3,8 @@
 
 using TableTraits
 using IteratorInterfaceExtensions
+using Arrow
+using DataFrames
 
 ## SparkSession
 
@@ -19,7 +21,7 @@ function SparkSession(;master="local",
     jcall(jbuilder, "master", JSparkSessionBuilder, (JString,), master)
     jcall(jbuilder, "appName", JSparkSessionBuilder, (JString,), appname)
     for (key, value) in config
-        jcall(jbuilder, "config", JSparkSessionBuilder, (JString, JString), key, value)
+        jcall(jbuilder, "config", JSparkSessionBuilder, (JString, JString), key, string(value))
     end
     jsess = jcall(jbuilder, "getOrCreate", JSparkSession, ())
     sess = SparkSession(jsess, master, appname)
@@ -71,12 +73,32 @@ function mapped_type(x::String)
     return Any
 end
 
-
-function TableTraits.getiterator(ds::Dataset)
+"""
+Returns array of tuples with the types of the columns
+```
+julia> Spark.dtypes(df)
+3-element Vector{NamedTuple{(:name, :type), Tuple{String, String}}}:
+ (name = "a", type = "StringType")
+ (name = "b", type = "StringType")
+ (name = "c", type = "DoubleType")
+```
+"""
+function dtypes(ds::Dataset)
     jtypes = jcall(ds.jdf, "dtypes", Vector{JavaObject{Symbol("scala.Tuple2")}}, ())
 
-    mnames = Symbol.(unsafe_string.(map(x -> convert(JString, jcall(x, "_1", JObject, ())), jtypes)))
-    mtypes = mapped_type.(unsafe_string.(map(x -> convert(JString, jcall(x, "_2", JObject, ())), jtypes)))
+    map(jtypes) do x
+        name = convert(JString, jcall(x, "_1", JObject, ())) |> unsafe_string
+        type = convert(JString, jcall(x, "_2", JObject, ())) |> unsafe_string
+        (name=name, type=type)
+    end
+end
+
+
+function TableTraits.getiterator(ds::Dataset)
+    types = dtypes(ds)
+
+    mnames = Symbol.(getfield.(types, :name))
+    mtypes = mapped_type.(getfield.(types, :type))
 
     T = NamedTuple{Tuple(mnames),Tuple{mtypes...}}
     
@@ -108,20 +130,23 @@ function Base.iterate(iter::DatasetIterator{T}, state=1) where {T}
     return nothing
 end
 
+"Returns schema of the Dataset in the DDL format. For example, it may be used to set schema of subsequent read_df operation."
+function schema_ddl(ds::Dataset)
+    jschema = jcall(ds.jdf, "schema", JStructType, ())
+    jcall(jschema, "toDDL", JString, ())
+end
+
+"Returns schema of the Dataset in a user readable format."
 function schema_string(ds::Dataset)
     jschema = jcall(ds.jdf, "schema", JStructType, ())
     jcall(jschema, "simpleString", JString, ())
 end
-show(ds::Dataset) = jcall(ds.jdf, "show", Nothing, ())
+show(ds::Dataset; numRows:: Int=20, truncate:: Bool=true) =
+    jcall(ds.jdf, "show", Nothing, (jint, jboolean), numRows, truncate)
 Base.show(io::IO, ds::Dataset) = print(io, "Dataset($(schema_string(ds)))")
 
 function Base.names(ds::Dataset)
-    jschema = jcall(ds.jdf, "schema", Spark.JStructType, ())
-    jnames = jcall(jschema, "fieldNames", Array{JavaObject{Symbol("java.lang.String")},1}, ())
-
-    names = unsafe_string.(jnames)
-
-    return names
+    getfield.(dtypes(ds), :name)
 end
 
 
@@ -164,14 +189,30 @@ end
 
 
 # generic dataframe reader/writer
+"""
+Reads data into Spark Data DataFrame
 
-function read_df(sess::SparkSession, path::AbstractString=""; format=nothing, options=Dict())
+```
+julia> df = read_df(sess, "./stops.txt"; format="csv", options=Dict("inferSchema" => true, "header" => true))
+Dataset(struct<stop_id:string,stop_name:string,stop_lat:double,stop_lon:double>)
+julia> Spark.count(df)
+13339
+```
+"""
+function read_df(sess::SparkSession, path::AbstractString="";
+    format=nothing,
+    schema=nothing,
+    options=Dict()
+)
     jreader = dataframe_reader(sess)
     if format != nothing
         jreader = jcall(jreader, "format", JDataFrameReader, (JString,), string(format))
     end
+    if schema != nothing
+        jreader = jcall(jreader, "schema", JDataFrameReader, (JString,), string(schema))
+    end
     for (k, v) in options
-        jreader = jcall(jreader, "option", JDataFrameReader, (JString, JString), string(k), v)
+        jreader = jcall(jreader, "option", JDataFrameReader, (JString, JString), string(k), string(v))
     end
     jds = path != "" ?
         jcall(jreader, "load", JDataset, (JString,), path) :
@@ -248,58 +289,242 @@ Base.length(jrow::JRow) = jcall(jrow, "length", jint, ())
 # NOTE: getindex starts indexing from 1
 Base.getindex(jrow::JRow, i::Integer) = jcall(jrow, "get", JObject, (jint,), i - 1)
 
+"Caches the Dataset in storage so it's not recomputed on each use"
 function cache(ds::Dataset)
     jds = jcall(ds.jdf, "cache", JDataset, ())
     return Dataset(jds)
 end
 
-function collect(ds::Dataset)
-    jrows = jcall(ds.jdf, "collectAsList", JList, ())
-    data = Array{Any}(nothing, 0)
-    for jrow in JavaCall.iterator(jrows)
-        arr = [native_type(narrow(jrow[i])) for i=1:length(jrow)]
-        push!(data, (arr...,))
-    end
-    return data
+"Returns the content of the Dataset as a Dataset of JSON strings."
+function to_json(ds::Dataset)
+    jds = jcall(ds.jdf, "toJSON", JDataset, ())
+    Dataset(jds)
 end
 
+function checkpoint(ds::Dataset; eager::Bool = true)
+    jds = jcall(ds.jdf, "checkpoint", JDataset, (jboolean,), eager)
+    Dataset(jds)
+end
+function local_checkpoint(ds::Dataset; eager::Bool = true)
+    jds = jcall(ds.jdf, "localCheckpoint", JDataset, (jboolean,), eager)
+    Dataset(jds)
+end
 
+function collect(ds::Dataset)
+    collect_to_arrow(ds) |> Tables.rowtable
+end
 
+"""
+Returns an array of named tuples that contains all rows in this Dataset.
+
+```
+julia> sql(sess, "select 1 as a, 'x' as b, array(1, 2, 3) as c") |> collect_to_tuples
+1-element Vector{NamedTuple{(:a, :b, :c), Tuple{Int32, String, Vector{Int32}}}}:
+ (a = 1, b = "x", c = [1, 2, 3])
+```
+"""
+function collect_to_tuples(ds::Dataset)
+    collect_to_arrow(ds) |> Tables.rowtable
+end
+
+"""Returns a DataFrame from DataFrames.jl that contains all rows in this Dataset."""
+function collect_to_dataframe(ds::Dataset)
+    collect_to_arrow(ds) |> DataFrame
+end
+
+"""Returns an Arrow.Table that contains all rows in this Dataset.
+   This function will be slightly faster than collect_to_dataframe so it should be preferred
+   if DataFrame features are not needed."""
+function collect_to_arrow(ds::Dataset)
+    mktemp() do path,io
+        jcall(JDatasetUtils, "collectToArrow", Nothing, (JDataset,JString), ds.jdf, path)
+        Arrow.Table(path)
+    end
+end
+
+"Returns the logical plans of the Dataset. Mode may be simple, extended, codegen, cost, or formatted"
+function explain_string(ds::Dataset, mode::AbstractString="simple")
+    jcall(JDatasetUtils, "explain", JString, (JDataset, JString,), ds.jdf, mode)
+end
+"Prints the logical plans to console of the Dataset. Mode may be simple, extended, codegen, cost, or formatted"
+function explain(ds::Dataset, mode::AbstractString="simple")
+    println(explain_string(ds, mode))
+end
+
+"""
+Returns the number of rows in the Dataset.
+```
+julia> Spark.range(sess, 0, 100) |> count
+100
+```
+"""
 function count(ds::Dataset)
     return jcall(ds.jdf, "count", jlong, ())
 end
 
 
+"""
+Returns a new Dataset by taking the first n rows.
+```
+julia> Spark.range(sess, 0, 888) |> Spark.limit(20) |> count
+20
+```
+"""
+function limit(ds::Dataset, count::Integer)
+    jds = jcall(ds.jdf, "limit", JDataset, (jint,), count)
+    Dataset(jds)
+end
+limit(count::Integer) = ds -> limit(ds, count)
+
+
+"""
+Creates a Spark Dataset from a SQL query.
+
+```
+julia> create_temp_view(Spark.range(sess, 0, 100), "my_table")
+julia> sql(sess, "select id * 20 as a from my_table where id > 5 limit 5") |> collect_to_dataframe
+5×1 DataFrame
+ Row │ a     
+     │ Int64 
+─────┼───────
+   1 │   120
+   2 │   140
+   3 │   160
+   4 │   180
+   5 │   200
+```
+"""
 function sql(sess::SparkSession, str::AbstractString)
     jds = jcall(sess.jsess, "sql", JDataset, (JString,), str)
     return Dataset(jds)
 end
 
+"""
+Creates a Dataset with a single LongType column named id, containing elements in a range from start to stop (exclusive)
 
+```
+julia> Spark.range(sess, 0, 100) |> Spark.count
+100
+```
+"""
+function range(sess::SparkSession, start::Int, stop::Int; step::Int=1, num_partitions::Union{Integer,Nothing}=nothing)
+    if num_partitions === nothing
+        Dataset(jcall(sess.jsess, "range", JDataset, (jlong,jlong,jlong), start, stop, step))
+    else
+        Dataset(jcall(sess.jsess, "range", JDataset, (jlong,jlong,jlong,jlong), start, stop, step, num_partitions))
+    end
+end
+
+"""
+References a Spark table
+
+```
+julia> create_temp_view(df, "mytable")
+julia> table(sess, "mytable")
+```
+"""
+function table(sess::SparkSession, name::AbstractString)
+    Dataset(jcall(sess.jsess, "table", JDataset, (JString,), name))
+end
+
+"""
+Create Spark DataFrame from a Table (for example from DataFrames.jl)
+
+```jl
+julia> create_df(sess, DataFrame(a=[1, 2], b=["a", "b"]))
+Dataset(struct<a:bigint,b:string>)
+
+julia> DataFrame(a=[1, 2], b=["a", "b"]) |> create_df(sess)
+Dataset(struct<a:bigint,b:string>)
+```
+"""
+function create_df(sess::SparkSession, table)
+    mktemp() do path,io
+        Arrow.write(path, table; file=false)
+        Dataset(jcall(JDatasetUtils, "fromArrow", JDataset, (JSparkSession,JString), sess.jsess, path))
+    end
+end
+
+create_df(sess::SparkSession) = table -> create_df(sess, table)
+
+"""
+```jl
+julia> create_temp_view(Spark.range(sess, 0, 100), "a")
+
+julia> sql(sess, "select * from a limit 3") |> collect_to_dataframe
+3×1 DataFrame
+ Row │ id    
+     │ Int64 
+─────┼───────
+   1 │     0
+   2 │     1
+   3 │     2
+```
+
+julia> Spark.range(sess, 0, 100) |> create_temp_view("a")
+"""
 create_temp_view(ds::Dataset, str::AbstractString) =
     jcall(ds.jdf, "createTempView", Nothing, (JString,), str)
+create_temp_view(str::AbstractString) =
+    ds -> create_temp_view(ds, str)
 
+"""
+```jl
+julia> create_temp_view(Spark.range(sess, 0, 100), "a")
 
+julia> Spark.range(sess, 0, 1000) |> create_or_replace_temp_view("a")
+
+julia> sql(sess, "select * from a where id % 3 == 0") |> Spark.count
+334
+"""
 create_or_replace_temp_view(ds::Dataset, str::AbstractString) =
     jcall(ds.jdf, "createOrReplaceTempView", Nothing, (JString,), str)
+create_or_replace_temp_view(str::AbstractString) =
+    ds -> create_or_replace_temp_view(ds, str)
 
 
 col(name::Union{String,Symbol}) =
     jcall(JSQLFunctions, "col", JColumn, (JString,), string(name))
 
-
+"""
+# Example
+```
+julia> collect_to_dataframe(Spark.describe(df, "lon", "lat"))
+5×3 DataFrame
+ Row │ summary  lon                 lat            
+     │ String?  String?             String?             
+─────┼──────────────────────────────────────────────────
+   1 │ count    13339               13339
+   2 │ mean     14.451034183971766  50.03984631006847
+   3 │ stddev   0.3419928578550804  0.19177661599129373
+   4 │ min      13.38806            49.00785
+   5 │ max      15.57627            50.58883
+```
+"""
 function describe(ds::Dataset, col_names::Union{Symbol,String}...)
     col_names = [string(name) for name in col_names]
     jdf = jcall(ds.jdf, "describe", JDataset, (Vector{JString},), col_names[1:end])
     return Dataset(jdf)
 end
 
+"""
+Returns the first row as a named tuple.
+"""
 function head(ds::Dataset)
-    jrow = convert(JRow, jcall(ds.jdf, "head", JObject, ()))
-    return Row(jrow)
+    row = collect_to_tuples(limit(ds, 1))
+    if isempty(row)
+        error("Dataset $ds is empty")
+    else
+        row[1]
+    end
 end
 
 
+"""
+Selects specified columns from the dataset
+julia> Spark.select(df, "lon", "lat")
+Dataset(struct<lon:double,lat:double>)
+"""
 function select(df::Dataset, col_names::Union{Symbol,String}...)
     col_names = [string(name) for name in col_names]
     jdf = jcall(df.jdf, "select", JDataset, (JString, Vector{JString},), col_names[1], col_names[2:end])

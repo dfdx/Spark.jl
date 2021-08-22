@@ -75,27 +75,83 @@ close(sc)
 
 A recent addition to this package is a DataFrame+SQL interface to Spark. In the examples below, it is assumed that you have a file people.json with content like this:
 
-```
+```json
 {"name": "Alice", "age": 27}
 {"name": "Bob", "age": 32}
 ```
 
-### Example: Read dataframe from JSON and collect to a driver
+### Example: Read JSON and collect
+
+This example reads JSON file using Spark and then immediately gathers this data into a Vector of named tuples in the driver process.
+
+```jl
+julia> spark = SparkSession()
+julia> df = read_json(spark, "/path/to/people.json")
+Dataset(struct<age:bigint,name:string>)
+julia> collect_to_tuples(df)
+2-element Vector{NamedTuple{(:age, :name), Tuple{Int64, String}}}:
+ (age=32, name="Peter")
+ (age=27, name="Belle")
+```
+
+### Example: Write Parquet
+
+Using the loaded DataFrame form above, we'll create a new parquet file
+
+```jl
+julia> write_parquet(df, "/path/to/people.parquet")
+```
+
+### Example: SQL querying
+
+We'll create a temporary table and then run a SQL query on it. The `sql` function returns another DataFrame which may be collected, written to disk or further processed. We'll collect it to a Julia DataFrame.
+
+```jl
+julia> create_temp_view(df, "people")
+julia> collect_to_dataframe(sql(sess, "select name, age from people where age < 30"))
+1×2 DataFrame
+ Row │ name     age    
+     │ String?  Int64? 
+─────┼─────────────────
+   1 │ Belle        27
+```
+
+Spark SQL support a large subset of the SQL standard, so it's a powerful way of doing data processing and querying.
+
+### Example: Read/Write other format
+
+We'll load a CSV file into a DataFrame. Spark can automatically infer schema of the file when enabled.
+
+The `read_df` function can be used to read many formats and there is a large number of external data sources for Spark.
+
+```jl
+julia> df = read_df(sess, "./mydata.csv"; format="csv", options=Dict("inferSchema" => true, "header" => true))
+Dataset(struct<a:string,b:string,c:double>)
+julia> Spark.count(df)
+123
+```
+
+Similarly, there is a `write_df` function for writing and supported format. It equivalent to calling `.write.format(X).save()` in Scala
+
+### Example: DataFrame from Julia data
+
+Spark DataFrame can be created from data stored in the Julia driver process using the `create_df` function. It expect a Tables.jl compatible table as an input, for example the one from DataFrames.jl will work nicely.
+
+
+```jl
+julia> juliaDf = DataFrame(a=[1, 2], b=["a", "b"])
+2×2 DataFrame
+ Row │ a      b      
+     │ Int64  String 
+─────┼───────────────
+   1 │     1  a
+   2 │     2  b
+julia> sparkDf = create_df(sess, juliaDf)
+Dataset(struct<a:bigint,b:string>)
 
 ```
-spark = SparkSession()
-df = read_json(spark, "/path/to/people.json")
-collect(df)
-```
 
-
-### Example: Read JSON and write Parquet
-
-```
-spark = SparkSession()
-df = read_json(spark, "/path/to/people.json")
-write_parquet(df, "/path/to/people.parquet")
-```
+### Example
 
 ## Current Limitations
 
