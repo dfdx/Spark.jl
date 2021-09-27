@@ -65,10 +65,13 @@ function load_spark_defaults(d::Dict)
     end
     p = split(read(spark_defaults_conf, String), '\n', keepempty=false)
     for x in p
-         if !startswith(x, "#") && !isempty(strip(x))
-             y=split(x, " ", limit=2)
-             d[y[1]]=strip(y[2])
-         end
+        if !startswith(x, "#") && !isempty(strip(x))
+            y=split(x, limit=2)
+            if size(y,1)==1
+               y=split(x, "=", limit=2)
+            end
+            d[y[1]]=strip(y[2])
+        end
     end
     return d
 end
