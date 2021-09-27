@@ -1,6 +1,6 @@
 name = "Spark"
 uuid = "e3819d11-95af-5eea-9727-70c091663a01"
-version = "0.5.1"
+version = "0.5.2"
 
 [deps]
 IteratorInterfaceExtensions = "82899510-4779-5014-852e-03e436cf321d"
