@@ -12,6 +12,8 @@ struct SparkSession
     appname::AbstractString
 end
 
+@dot_call SparkSession
+
 function SparkSession(;master="local",
                       appname="Julia App on Spark",
                       config=Dict{String, String}())
@@ -27,6 +29,7 @@ function SparkSession(;master="local",
     add_jar(sc, joinpath(dirname(@__FILE__), "..", "jvm", "sparkjl", "target", "sparkjl-0.1.jar"))
     return sess
 end
+
 
 Base.show(io::IO, sess::SparkSession) = print(io, "SparkSession($(sess.master),$(sess.appname))")
 Base.close(sess::SparkSession) = jcall(sess.jsess, "close", Nothing, ())
@@ -44,6 +47,7 @@ struct Dataset
     jdf::JDataset
 end
 
+@dot_call Dataset
 
 struct DatasetIterator{T}
     itr::JavaObject{Symbol("java.util.Iterator")}
@@ -63,7 +67,7 @@ type_map = Dict(
     "ObjectType"  => JObject
 )
 
-function mapped_type(x::String) 
+function mapped_type(x::String)
     if x in keys(type_map)
         return type_map[x]
     end
@@ -79,7 +83,7 @@ function TableTraits.getiterator(ds::Dataset)
     mtypes = mapped_type.(unsafe_string.(map(x -> convert(JString, jcall(x, "_2", JObject, ())), jtypes)))
 
     T = NamedTuple{Tuple(mnames),Tuple{mtypes...}}
-    
+
     jit = jcall(ds.jdf, "toLocalIterator", JavaObject{Symbol("java.util.Iterator")}, ())
 
     l = count(ds)
@@ -205,6 +209,8 @@ struct Row
     jrow::JRow
 end
 
+@dot_call Row
+
 Row(objs...) = Row(jcall(JRowFactory, "create", JRow, (Vector{JObject},), [objs...]))
 
 
@@ -313,6 +319,7 @@ struct RelationalGroupedDataset
     jrgd::JRelationalGroupedDataset
 end
 
+@dot_call RelationalGroupedDataset
 
 function group_by(ds::Dataset, col_names...)
     @assert length(col_names) > 0 "group_by requires at least one column name"

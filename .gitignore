@@ -2,6 +2,7 @@
 *.jl.mem
 *~
 .idea/
+.vscode/
 target/
 project/
 *.class
