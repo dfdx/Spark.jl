@@ -35,14 +35,14 @@ export
     # SQL
     SparkSession,
     Dataset,
-    sql,
-    count,
-    read_json,
-    write_json,
-    read_parquet,
-    write_parquet,
-    read_df,
-    write_df
+    sql
+    # count,
+    # read_json,
+    # write_json,
+    # read_parquet,
+    # write_parquet,
+    # read_df,
+    # write_df
 
 
 

@@ -1,13 +1,13 @@
-using Spark
-
 using Test
+using Spark
+import Spark: @chainable
 
 Spark.init()
 
-@testset "Spark" begin
+include("test_chainable.jl")
+include("test_sql.jl")
+include("test_streaming.jl")
 
-include("sql.jl")
-
+#
 # include("rdd/test_rdd.jl")
 
-end

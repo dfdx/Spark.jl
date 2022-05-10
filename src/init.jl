@@ -1,6 +1,6 @@
 global const SPARK_DEFAULT_PROPS = Dict()
 
-function init()
+function init(; log_level="WARN")
     JavaCall.addClassPath(get(ENV, "CLASSPATH", ""))
     defaults = load_spark_defaults(SPARK_DEFAULT_PROPS)
     shome =  get(ENV, "SPARK_HOME", "")
@@ -39,12 +39,22 @@ function init()
     JavaCall.init()
 
     validateJavaVersion()
+
+    # set logging level
+    JLogger = @jimport org.apache.log4j.Logger
+    JLevel = @jimport org.apache.log4j.Level
+    level = jfield(JLevel, log_level, JLevel)
+    for logger_name in ("org", "akka")
+        logger = jcall(JLogger, "getLogger", JLogger, (JString,), logger_name)
+        jcall(logger, "setLevel", Nothing, (JLevel,), level)
+    end
+
 end
 
 function validateJavaVersion()
     version::String = jcall(JSystem, "getProperty", JString, (JString,), "java.version")
-    if !startswith(version, "1.8")
-        @warn "Java 1.8 is recommended for Spark.jl, but Java $version was used."
+    if !startswith(version, "1.8") && !startswith(version, "11.")
+        @warn "Java 1.8 or 1.11 is recommended for Spark.jl, but Java $version was used."
     end
 end
 

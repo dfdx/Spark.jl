@@ -153,11 +153,11 @@
       <artifactId>scala-library</artifactId>
       <version>${scala.version}</version>
     </dependency>
-    <dependency>
+    <!-- <dependency>
       <groupId>org.mdkt.compiler</groupId>
       <artifactId>InMemoryJavaCompiler</artifactId>
       <version>1.3.0</version>
-    </dependency>
+    </dependency> -->
 
     <!-- additional data formats -->
 

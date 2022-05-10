@@ -1,18 +1,47 @@
-# # const JFile = @jimport java.io.File
-# const JToolProvider = @jimport javax.tools.ToolProvider
-# const JJavaCompiler = @jimport javax.tools.JavaCompiler
-# const JInputStream = @jimport java.io.InputStream
-# const JOutputStream = @jimport java.io.OutputStream
-# const JArray = @jimport java.lang.reflect.Array
+using JavaCall
 
-const JInMemoryJavaCompiler = @jimport org.mdkt.compiler.InMemoryJavaCompiler
 
-# const JUDF1 = @jimport org.apache.spark.sql.api.java.UDF1
+const JFile = @jimport java.io.File
+const JToolProvider = @jimport javax.tools.ToolProvider
+const JJavaCompiler = @jimport javax.tools.JavaCompiler
+const JInputStream = @jimport java.io.InputStream
+const JOutputStream = @jimport java.io.OutputStream
+const JClassLoader = @jimport java.lang.ClassLoader
+const JURLClassLoader = @jimport java.net.URLClassLoader
+const JURI = @jimport java.net.URI
+const JURL = @jimport java.net.URL
+
+
+function JavaCall.classforname(name::String, loader)
+    return jcall(JClass, "forName", JClass, (JString, jboolean, JClassLoader),
+                 name, true, loader)
+end
 
 
 function mkclass(name::String, src::String)
-    jcompiler = jcall(JInMemoryJavaCompiler, "newInstance", JInMemoryJavaCompiler, ())
-    return jcall(jcompiler, "compile", JClass, (JString, JString), name, src)
+    # based on https://stackoverflow.com/a/2946402
+    cls = mktempdir(; prefix="jj-") do root
+        # write source to a file
+        elems = split(name, ".")
+        pkg_path = joinpath(root, elems[1:end-1]...)
+        mkpath(pkg_path)
+        src_path = joinpath(pkg_path, elems[end] * ".java")
+        open(src_path, "w") do f
+            write(f, src)
+        end
+        # compile
+        jcompiler = jcall(JToolProvider, "getSystemJavaCompiler", JJavaCompiler)
+        jcall(jcompiler, "run", jint,
+            (JInputStream, JOutputStream, JOutputStream, Vector{JString}),
+            nothing, nothing, nothing, [src_path])
+        # load class
+        jfile = JFile((JString,), root)
+        juri = jcall(jfile, "toURI", JURI)
+        jurl = jcall(juri, "toURL", JURL)
+        jloader = jcall(JURLClassLoader, "newInstance", JURLClassLoader, (Vector{JURL},), [jurl])
+        classforname(name, jloader)
+    end
+    return cls
 end
 
 
@@ -22,39 +51,11 @@ function instantiate(name::String, src::String)
 end
 
 
-function main()
-    init()
-    name = "julia.compiled.Dummy"
-    src = """
-        package julia.compiled;
-
-        import java.util.function.Function;
-
-        public class Dummy implements Function<String, String> {
-
-            @Override
-            public String apply(String name) {
-                return "Hello, " + name;
-            }
-
-            public void hello() {
-                System.out.println("Hello!");
-            }
-        }
-    """
-    jc = mkclass(name, src)
-    jo = jcall(jc, "newInstance", JObject, ())
-    # jo = instantiate(name, src)
-    # can't call inherited methods like this?
-    jcall(jo, "apply", JString, (JString,), "Lee")
-    jcall2(jo, "hello", Nothing, ())
-    jcall(jc, "getMethods", Vector{JMethod}, ())
-end
-
-
 function jcall2(jobj::JavaObject, name::String, ret_type, arg_types, args...)
     jclass = getclass(jobj)
     jargs = [a for a in convert.(arg_types, args)]  # convert to Vector
     meth = jcall(jclass, "getMethod", JMethod, (JString, Vector{JClass}), name, getclass.(jargs))
-    return meth(jobj, jargs...)
+    ret = meth(jobj, jargs...)
+    return convert(ret_type, ret)
 end
+
