@@ -11,6 +11,12 @@ const JColumn = @jimport org.apache.spark.sql.Column
 const JStructType = @jimport org.apache.spark.sql.types.StructType
 const JSQLFunctions = @jimport org.apache.spark.sql.functions
 
+const JULIA_TO_JAVA_TYPES = Dict(
+    String => JString,
+    Integer => @jimport(java.lang.Long),
+    Real => @jimport(java.lang.Double),
+    Bool => @jimport(java.lang.Boolean)
+)
 
 ###############################################################################
 #                                Type Definitions                             #
@@ -32,6 +38,14 @@ struct DataFrameReader
     jreader::JDataFrameReader
 end
 
+struct DataFrameWriter
+    jwriter::JDataFrameWriter
+end
+
+struct Column
+    jcol::JColumn
+end
+
 
 ###############################################################################
 #                            SparkSession.Builder                             #
@@ -40,32 +54,27 @@ end
 @chainable SparkSessionBuilder
 Base.show(io::IO, ::SparkSessionBuilder) = print(io, "SparkSessionBuilder()")
 
-
 function appName(builder::SparkSessionBuilder, name::String)
     jcall(builder.jbuilder, "appName", JSparkSessionBuilder, (JString,), name)
     return builder
 end
-
 
 function master(builder::SparkSessionBuilder, uri::String)
     jcall(builder.jbuilder, "master", JSparkSessionBuilder, (JString,), uri)
     return builder
 end
 
-
-for (T, JT) in [(String, JString), (Integer, jlong), (Real, jdouble), (Bool, jboolean)]
+for (T, JT) in JULIA_TO_JAVA_TYPES
     @eval function config(builder::SparkSessionBuilder, key::String, value::$T)
         jcall(builder.jbuilder, "config", JSparkSessionBuilder, (JString, $JT), key, value)
         return builder
     end
 end
 
-
 function enableHiveSupport(builder::SparkSessionBuilder)
     jcall(builder.jbuilder, "enableHiveSupport", JSparkSessionBuilder)
     return builder
 end
-
 
 function getOrCreate(builder::SparkSessionBuilder)
     config(builder, "spark.jars", joinpath(dirname(@__FILE__), "..", "jvm", "sparkjl", "target", "sparkjl-0.1.jar"))
@@ -101,13 +110,61 @@ function Base.read(spark::SparkSession)
 end
 
 
+function config(spark::SparkSession)
+    # spark.sparkContext.getConf().getAll()
+    jctx = jcall(spark.jspark, "sparkContext", JSparkContext)
+    jconf = jcall(jctx, "getConf", JSparkConf)
+    entries = jcall(jconf, "getAll", Vector{@jimport scala.Tuple2})
+    ret = Dict{String, Any}()
+    for e in entries
+        key = convert(JString, jcall(e, "_1", JObject)) |> unsafe_string
+        jval = jcall(e, "_2", JObject)
+        cls_name = getname(getclass(jval))
+        val = if cls_name == "java.lang.String"
+            unsafe_string(convert(JString, jval))
+        else
+            "(value type $cls_name is not supported)"
+        end
+        ret[key] = val
+    end
+    return ret
+end
+
 ###############################################################################
 #                                  DataFrame                                  #
 ###############################################################################
 
-@chainable DataFrame
 Base.show(df::DataFrame) = jcall(df.jdf, "show", Nothing)
 Base.show(io::IO, ::DataFrame) = show(df)
+
+
+function Base.getindex(df::DataFrame, name::String)
+    jcol = jcall(df.jdf, "col", JColumn, (JString,), name)
+    return Column(jcol)
+end
+
+function Base.getproperty(df::DataFrame, prop::Symbol)
+    if hasfield(DataFrame, prop)
+        return getfield(df, prop)
+    elseif string(prop) in columns(df)
+        return df[string(prop)]
+    else
+        fn = getfield(@__MODULE__, prop)
+        return DotChainer(obj, fn)
+    end
+end
+
+
+function columns(df::DataFrame)
+    jnames = jcall(df.jdf, "columns", Vector{JString})
+    names = [unsafe_string(jn) for jn in jnames]
+    return names
+end
+
+
+
+
+
 
 
 ###############################################################################
@@ -132,9 +189,9 @@ for (T, JT) in [(String, JString), (Integer, jlong), (Real, jdouble), (Bool, jbo
 end
 
 
-for func in (:csv, :json, :parquet, :text. :textFile)
+for func in (:csv, :json, :parquet, :text, :textFile)
     @eval function $func(reader::DataFrameReader, paths::String...)
-        jdf = jcall(reader.jreader, string(func), JDataset, (Vector{JString},), collect(paths))
+        jdf = jcall(reader.jreader, string($func), JDataset, (Vector{JString},), collect(paths))
         return DataFrame(jdf)
     end
 end
@@ -146,6 +203,32 @@ function load(reader::DataFrameReader, paths::String...)
     return DataFrame(jdf)
 end
 
+
+###############################################################################
+#                                    Column                                   #
+###############################################################################
+
+function Column(name::String)
+    jcol = jcall(JSQLFunctions, "col", JColumn, (JString,), name)
+    return Column(jcol)
+end
+
+@chainable Column
+function Base.show(io::IO, col::Column)
+    name = jcall(col.jcol, "toString", JString)
+    print(io, "col(\"$name\")")
+end
+
+
+for (func, name) in [(:+, "plus"), (:-, "minus"), (:*, "multiply"), (:/, "divide")]
+    for (T, JT) in JULIA_TO_JAVA_TYPES
+        @eval function Base.$func(col::Column, obj::$T)
+            jobj = convert(JObject, convert($JT, obj))
+            jres = jcall(col.jcol, $name, JColumn, (JObject,), jobj)
+            return Column(jres)
+        end
+    end
+end
 
 # struct DatasetIterator{T}
 #     itr::JavaObject{Symbol("java.util.Iterator")}

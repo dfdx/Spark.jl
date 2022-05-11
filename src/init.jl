@@ -1,6 +1,10 @@
 global const SPARK_DEFAULT_PROPS = Dict()
 
 function init(; log_level="WARN")
+    if JavaCall.isloaded()
+        @warn "JVM already initialized, this call will have no effect"
+        return
+    end
     JavaCall.addClassPath(get(ENV, "CLASSPATH", ""))
     defaults = load_spark_defaults(SPARK_DEFAULT_PROPS)
     shome =  get(ENV, "SPARK_HOME", "")

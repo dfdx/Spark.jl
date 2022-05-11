@@ -1,6 +1,10 @@
 module Spark
 
 export
+    SparkSession,
+    DataFrame,
+    Column,
+    config
     # SparkConf,
     # SparkContext,
     # RDD,
@@ -33,9 +37,9 @@ export
     # coalesce,
     # pipe,
     # SQL
-    SparkSession,
-    Dataset,
-    sql
+    # SparkSession,
+    # Dataset,
+    # sql
     # count,
     # read_json,
     # write_json,
