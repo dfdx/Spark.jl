@@ -22,8 +22,51 @@ end
         @test func(col, 1.0) isa Column
     end
 
-    @test col + "!" isa Column
+    @test col.alias("money") isa Column
+    @test col.asc() isa Column
+    @test col.asc_nulls_first() isa Column
+    @test col.asc_nulls_last() isa Column
 
+    @test col.between(1, 2) isa Column
+    @test col.bitwiseAND(1) isa Column
+    @test col & 1 isa Column
+    @test col.bitwiseOR(1) isa Column
+    @test col | 1 isa Column
+    @test col.bitwiseXOR(1) isa Column
+    @test col ⊻ 1 isa Column
+
+    @test col.contains("a") isa Column
+
+    @test col.desc() isa Column
+    @test col.desc_nulls_first() isa Column
+    @test col.desc_nulls_last() isa Column
+
+    @test col.endswith("a") isa Column
+    @test col.endswith(Column("other")) isa Column
+
+    @test col.eqNullSafe("other") isa Column
+    @test (col == Column("other")) isa Column
+    @test (col == "abc") isa Column
+    @test (col != Column("other")) isa Column
+    @test (col != "abc") isa Column
+
+    col.explain()   # smoke test
+
+    @test col.isNull() isa Column
+    @test col.isNotNull() isa Column
+
+    @test col.like("abc") isa Column
+    @test col.rlike("abc") isa Column
+
+    @test_broken col.when(Column("flag"), 1).otherwise("abc") isa Colon
+
+    @test col.over() isa Column
+
+    @test col.startswith("a") isa Column
+    @test col.startswith(Column("other")) isa Column
+
+    @test col.substr(Column("start"), Column("len")) isa Column
+    @test col.substr(0, 3) isa Column
 end
 
 

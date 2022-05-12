@@ -10,12 +10,15 @@ const JRow = @jimport org.apache.spark.sql.Row
 const JColumn = @jimport org.apache.spark.sql.Column
 const JStructType = @jimport org.apache.spark.sql.types.StructType
 const JSQLFunctions = @jimport org.apache.spark.sql.functions
+const JLong = @jimport java.lang.Long
+const JDouble = @jimport java.lang.Double
+const JBoolean = @jimport java.lang.Boolean
 
 const JULIA_TO_JAVA_TYPES = Dict(
     String => JString,
-    Integer => @jimport(java.lang.Long),
-    Real => @jimport(java.lang.Double),
-    Bool => @jimport(java.lang.Boolean)
+    Integer => JLong,
+    Real => JDouble,
+    Bool => JBoolean
 )
 
 ###############################################################################
@@ -162,11 +165,6 @@ function columns(df::DataFrame)
 end
 
 
-
-
-
-
-
 ###############################################################################
 #                                DataFrameReader                              #
 ###############################################################################
@@ -220,15 +218,109 @@ function Base.show(io::IO, col::Column)
 end
 
 
+Base.convert(::Type{JObject}, x::Integer) = convert(JObject, convert(JLong, x))
+Base.convert(::Type{JObject}, x::Real) = convert(JObject, convert(JDouble, x))
+Base.convert(::Type{JObject}, x::Column) = convert(JObject, x.jcol)
+
+
+# binary with JObject
 for (func, name) in [(:+, "plus"), (:-, "minus"), (:*, "multiply"), (:/, "divide")]
-    for (T, JT) in JULIA_TO_JAVA_TYPES
-        @eval function Base.$func(col::Column, obj::$T)
-            jobj = convert(JObject, convert($JT, obj))
-            jres = jcall(col.jcol, $name, JColumn, (JObject,), jobj)
-            return Column(jres)
-        end
+    @eval function Base.$func(col::Column, obj::T) where T
+        jres = jcall(col.jcol, $name, JColumn, (JObject,), obj)
+        return Column(jres)
     end
 end
+
+
+alias(col::Column, name::String) =
+    Column(jcall(col.jcol, "alias", JColumn, (JString,), name))
+
+asc(col::Column) = Column(jcall(col.jcol, "asc", JColumn))
+asc_nulls_first(col::Column) = Column(jcall(col.jcol, "asc_nulls_first", JColumn))
+asc_nulls_last(col::Column) = Column(jcall(col.jcol, "asc_nulls_last", JColumn))
+
+between(col::Column, low, up) =
+    Column(jcall(col.jcol, "between", JColumn, (JObject, JObject), low, up))
+
+bitwiseAND(col::Column, other) =
+    Column(jcall(col.jcol, "bitwiseAND", JColumn, (JObject,), other))
+Base.:&(col::Column, other) = bitwiseAND(col, other)
+
+bitwiseOR(col::Column, other) =
+    Column(jcall(col.jcol, "bitwiseOR", JColumn, (JObject,), other))
+Base.:|(col::Column, other) = bitwiseOR(col, other)
+
+bitwiseXOR(col::Column, other) =
+    Column(jcall(col.jcol, "bitwiseXOR", JColumn, (JObject,), other))
+Base.:⊻(col::Column, other) = bitwiseXOR(col, other)
+
+
+Base.contains(col::Column, other) =
+    Column(jcall(col.jcol, "contains", JColumn, (JObject,), other))
+
+desc(col::Column) = Column(jcall(col.jcol, "desc", JColumn))
+desc_nulls_first(col::Column) = Column(jcall(col.jcol, "desc_nulls_first", JColumn))
+desc_nulls_last(col::Column) = Column(jcall(col.jcol, "desc_nulls_last", JColumn))
+
+# dropFields should go here, but it's not in listmethods(col.jcol) ¯\_(ツ)_/¯
+
+Base.endswith(col::Column, other) =
+    Column(jcall2(col.jcol, "endsWith", JColumn, (JObject,), other))
+Base.endswith(col::Column, other::Column) =
+    Column(jcall(col.jcol, "endsWith", JColumn, (JColumn,), other.jcol))
+
+eqNullSafe(col::Column, other) =
+    Column(jcall(col.jcol, "eqNullSafe", JColumn, (JObject,), other))
+
+Base.:(==)(col::Column, other) = Column(jcall(col.jcol, "equalTo", JColumn, (JObject,), other))
+Base.:(!=)(col::Column, other) = Column(jcall(col.jcol, "notEqual", JColumn, (JObject,), other))
+
+explain(col::Column, extended=false) = jcall(col.jcol, "explain", jvoid, (jboolean,), extended)
+
+isNotNull(col::Column) = Column(jcall(col.jcol, "isNotNull", JColumn))
+isNull(col::Column) = Column(jcall(col.jcol, "isNull", JColumn))
+
+like(col::Column, s::String) = Column(jcall(col.jcol, "like", JColumn, (JString,), s))
+
+otherwise(col::Column, other) =
+    Column(jcall(col.jcol, "otherwise", JColumn, (JObject,), other))
+
+over(col::Column) = Column(jcall(col.jcol, "over", JColumn))
+
+rlike(col::Column, s::String) = Column(jcall(col.jcol, "rlike", JColumn, (JString,), s))
+
+Base.startswith(col::Column, other) =
+    Column(jcall2(col.jcol, "startsWith", JColumn, (JObject,), other))
+Base.startswith(col::Column, other::Column) =
+    Column(jcall(col.jcol, "startsWith", JColumn, (JColumn,), other.jcol))
+
+substr(col::Column, start::Column, len::Column) =
+    Column(jcall(col.jcol, "substr", JColumn, (JColumn, JColumn), start.jcol, len.jcol))
+substr(col::Column, start::Integer, len::Integer) =
+    Column(jcall(col.jcol, "substr", JColumn, (jint, jint), start, len))
+
+when(col::Column, condition::Column, value) =
+    Column(jcall(col.jcol, "when", JColumn, (JColumn, JObject), condition.jcol, value))
+
+
+# binary with Column
+# for (func, name) in [(:&&, "and"), (:||, "or"), (:startswith, "startsWith"), (:endsWith, "endsWith")]
+#     @eval function Base.:($func)(col1::Column, col2::Column)
+#         jres = jcall(col1.jcol, $name, JColumn, (JColumn, JColumn), col2.jcol)
+#         return Column(jres)
+#     end
+# end
+
+# # unary
+# for (func, name) in [(:+, "plus"), (:-, "minus"), (:*, "multiply"), (:/, "divide")]
+#     for (T, JT) in [(Real, JDouble), (Integer, JLong)]
+#         @eval function Base.$func(col::Column)
+#             jres = jcall(col.jcol, $name, JColumn, (JObject,), jobj)
+#             return Column(jres)
+#         end
+#     end
+# end
+
 
 # struct DatasetIterator{T}
 #     itr::JavaObject{Symbol("java.util.Iterator")}
