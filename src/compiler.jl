@@ -11,6 +11,15 @@ const JURLClassLoader = @jimport java.net.URLClassLoader
 const JURI = @jimport java.net.URI
 const JURL = @jimport java.net.URL
 
+const JUDF1 = @jimport org.apache.spark.sql.api.java.UDF1
+
+
+java_typename(::Type{JavaObject{name}}) where name = string(name)
+
+var_typename(tape::Tape, v::Variable) =
+    JULIA_TO_JAVA_TYPES[typeof(tape[v].val)] |> java_typename
+var_name(v::Variable) = string(Umlaut.make_name(v.id))
+
 
 function JavaCall.classforname(name::String, loader)
     return jcall(JClass, "forName", JClass, (JString, jboolean, JClassLoader),
@@ -50,6 +59,12 @@ function instantiate(name::String, src::String)
     return jcall(jclass, "newInstance", JObject, ())
 end
 
+function instantiate(src::String)
+    pkg_name = match(r"package ([a-zA-z0-9_\.]+);", src).captures[1]
+    class_name = match(r"class ([a-zA-z0-9_]+)", src).captures[1]
+    return instantiate("$pkg_name.$class_name", src)
+end
+
 
 function jcall2(jobj::JavaObject, name::String, ret_type, arg_types, args...)
     jclass = getclass(jobj)
@@ -59,3 +74,44 @@ function jcall2(jobj::JavaObject, name::String, ret_type, arg_types, args...)
     return convert(ret_type, ret)
 end
 
+
+function to_java(tape::Tape)
+    src = "package j2j;\n\n"
+    src *= "import org.apache.spark.sql.api.java.UDF1;\n\n"
+    # class name
+    fn_name = string(tape[V(1)].val)
+    class_name = fn_name * "_" * string(gensym())[3:end]
+    # arguments
+    arg_vars = inputs(tape)[2:end]
+    arg_names = [var_name(v) for v in arg_vars]
+    arg_types = [var_typename(tape, v) for v in arg_vars]
+    arg_type_str = join(arg_types, ",")
+    arg_and_types = join(["$T $n" for (n, T) in zip(arg_names, arg_types)], ",")
+    # return value
+    ret_name = var_name(tape.result)
+    ret_type = var_typename(tape, tape.result)
+
+
+    src *= "public class $class_name implements UDF1<$arg_type_str, $ret_type> {\n\n"
+    src *= "    public $ret_type call($arg_and_types) {\n"
+
+    src *= "    return 1.0;"  # TODO
+    src *= "    }\n"
+    src *= "}"
+    return src
+end
+
+
+###############################################################################
+#                                      UDF                                    #
+###############################################################################
+
+function udf(f, args...)
+    val, tape = trace(f, args...)
+end
+
+
+function main_udf()
+    f = (x) -> 2x + 1
+    args = (2.0,)
+end

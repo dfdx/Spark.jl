@@ -1,6 +1,8 @@
 using JavaCall
-using TableTraits
-using IteratorInterfaceExtensions
+using Umlaut
+import Umlaut.V
+# using TableTraits
+# using IteratorInterfaceExtensions
 
 
 include("chainable.jl")

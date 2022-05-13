@@ -3,13 +3,16 @@ const JSparkSessionBuilder = @jimport org.apache.spark.sql.SparkSession$Builder
 const JDataFrameReader = @jimport org.apache.spark.sql.DataFrameReader
 const JDataFrameWriter = @jimport org.apache.spark.sql.DataFrameWriter
 const JDataset = @jimport org.apache.spark.sql.Dataset
-const JRelationalGroupedDataset = @jimport org.apache.spark.sql.RelationalGroupedDataset
-const JGenericRow = @jimport org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
-const JRowFactory = @jimport org.apache.spark.sql.RowFactory
+# const JRelationalGroupedDataset = @jimport org.apache.spark.sql.RelationalGroupedDataset
+# const JGenericRow = @jimport org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
+# const JRowFactory = @jimport org.apache.spark.sql.RowFactory
 const JRow = @jimport org.apache.spark.sql.Row
 const JColumn = @jimport org.apache.spark.sql.Column
+const JDataType = @jimport org.apache.spark.sql.types.DataType
 const JStructType = @jimport org.apache.spark.sql.types.StructType
+const JStructField = @jimport org.apache.spark.sql.types.StructField
 const JSQLFunctions = @jimport org.apache.spark.sql.functions
+
 const JLong = @jimport java.lang.Long
 const JDouble = @jimport java.lang.Double
 const JBoolean = @jimport java.lang.Boolean
@@ -18,7 +21,16 @@ const JULIA_TO_JAVA_TYPES = Dict(
     String => JString,
     Integer => JLong,
     Real => JDouble,
+    Float32 => JDouble,   # intentionally ignore bitness
+    Float64 => JDouble,
     Bool => JBoolean
+)
+
+const JAVA_TO_JULIA_TYPES = Dict(
+    JString => String,
+    JLong => Integer,
+    JDouble => Real,
+    JBoolean => Bool
 )
 
 ###############################################################################
@@ -49,6 +61,27 @@ struct Column
     jcol::JColumn
 end
 
+struct Row
+    jrow::JRow
+end
+
+struct StructType
+    jst::JStructType
+end
+
+
+
+###############################################################################
+#                                Conversions                                  #
+###############################################################################
+
+Base.convert(::Type{JObject}, x::Integer) = convert(JObject, convert(JLong, x))
+Base.convert(::Type{JObject}, x::Real) = convert(JObject, convert(JDouble, x))
+Base.convert(::Type{JObject}, x::Column) = convert(JObject, x.jcol)
+
+Base.convert(::Type{Row}, obj::JObject) = Row(convert(JRow, obj))
+
+Base.convert(::Type{String}, obj::JString) = unsafe_string(obj)
 
 ###############################################################################
 #                            SparkSession.Builder                             #
@@ -138,7 +171,7 @@ end
 ###############################################################################
 
 Base.show(df::DataFrame) = jcall(df.jdf, "show", Nothing)
-Base.show(io::IO, ::DataFrame) = show(df)
+Base.show(io::IO, df::DataFrame) = show(df)
 
 
 function Base.getindex(df::DataFrame, name::String)
@@ -153,10 +186,9 @@ function Base.getproperty(df::DataFrame, prop::Symbol)
         return df[string(prop)]
     else
         fn = getfield(@__MODULE__, prop)
-        return DotChainer(obj, fn)
+        return DotChainer(df, fn)
     end
 end
-
 
 function columns(df::DataFrame)
     jnames = jcall(df.jdf, "columns", Vector{JString})
@@ -164,6 +196,16 @@ function columns(df::DataFrame)
     return names
 end
 
+
+
+head(df::DataFrame) = Row(jcall(df.jdf, "head", JObject))
+function  head(df::DataFrame, n::Integer)
+    jobjs = jcall(df.jdf, "head", JObject, (jint,), n)
+    jrows = convert(Vector{JRow}, jobjs)
+    return map(Row, jrows)
+end
+Base.first(df::DataFrame) = Row(jcall(df.jdf, "first", JObject))
+Base.count(df::DataFrame) = jcall(df.jdf, "count", jlong)
 
 ###############################################################################
 #                                DataFrameReader                              #
@@ -216,11 +258,6 @@ function Base.show(io::IO, col::Column)
     name = jcall(col.jcol, "toString", JString)
     print(io, "col(\"$name\")")
 end
-
-
-Base.convert(::Type{JObject}, x::Integer) = convert(JObject, convert(JLong, x))
-Base.convert(::Type{JObject}, x::Real) = convert(JObject, convert(JDouble, x))
-Base.convert(::Type{JObject}, x::Column) = convert(JObject, x.jcol)
 
 
 # binary with JObject
@@ -303,24 +340,69 @@ when(col::Column, condition::Column, value) =
     Column(jcall(col.jcol, "when", JColumn, (JColumn, JObject), condition.jcol, value))
 
 
-# binary with Column
-# for (func, name) in [(:&&, "and"), (:||, "or"), (:startswith, "startsWith"), (:endsWith, "endsWith")]
-#     @eval function Base.:($func)(col1::Column, col2::Column)
-#         jres = jcall(col1.jcol, $name, JColumn, (JColumn, JColumn), col2.jcol)
-#         return Column(jres)
+###############################################################################
+#                                     Row                                     #
+###############################################################################
+
+@chainable Row
+function Base.show(io::IO, row::Row)
+    str = jcall(row.jrow, "toString", JString)
+    print(io, str)
+end
+
+
+function Base.getindex(row::Row, i::Integer)
+    jobj = jcall(row.jrow, "get", JObject, (jint,), i - 1)
+    class_name = getname(getclass(jobj))
+    JT = JavaObject{Symbol(class_name)}
+    T = JAVA_TO_JULIA_TYPES[JT]
+    return convert(T, convert(JT, jobj))
+    # TODO: test all 4 types
+end
+
+function Base.getindex(row::Row, name::String)
+    i = jcall(row.jrow, "fieldIndex", jint, (JString,), name)
+    return row[i + 1]
+end
+
+
+schema(row::Row) = StructType(jcall(row.jrow, "schema", JStructType))
+
+
+function Base.getproperty(row::Row, prop::Symbol)
+    if hasfield(Row, prop)
+        return getfield(row, prop)
+    elseif string(prop) in names(schema(row))
+        return row[string(prop)]
+    else
+        fn = getfield(@__MODULE__, prop)
+        return DotChainer(row, fn)
+    end
+end
+
+
+###############################################################################
+#                                  StructType                                 #
+###############################################################################
+
+@chainable StructType
+Base.show(io::IO, st::StructType) = print(io, jcall(st.jst, "toString", JString))
+
+fieldNames(st::StructType) = convert(Vector{String}, jcall(st.jst, "fieldNames", Vector{JString}))
+Base.names(st::StructType) = fieldNames(st)
+
+
+
+# function Base.getproperty(row::Row, prop::Symbol)
+#     if hasfield(Row, prop)
+#         return getfield(row, prop)
+#     elseif string(prop) in columns(df)  # requires schema
+#         return df[string(prop)]
+#     else
+#         fn = getfield(@__MODULE__, prop)
+#         return DotChainer(df, fn)
 #     end
 # end
-
-# # unary
-# for (func, name) in [(:+, "plus"), (:-, "minus"), (:*, "multiply"), (:/, "divide")]
-#     for (T, JT) in [(Real, JDouble), (Integer, JLong)]
-#         @eval function Base.$func(col::Column)
-#             jres = jcall(col.jcol, $name, JColumn, (JObject,), jobj)
-#             return Column(jres)
-#         end
-#     end
-# end
-
 
 # struct DatasetIterator{T}
 #     itr::JavaObject{Symbol("java.util.Iterator")}
