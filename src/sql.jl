@@ -1,14 +1,21 @@
+const JSparkConf = @jimport org.apache.spark.SparkConf
+const JSparkContext = @jimport org.apache.spark.SparkContext
+const JJavaSparkContext = @jimport org.apache.spark.api.java.JavaSparkContext
+
 const JSparkSession = @jimport org.apache.spark.sql.SparkSession
 const JSparkSessionBuilder = @jimport org.apache.spark.sql.SparkSession$Builder
 const JDataFrameReader = @jimport org.apache.spark.sql.DataFrameReader
 const JDataFrameWriter = @jimport org.apache.spark.sql.DataFrameWriter
 const JDataset = @jimport org.apache.spark.sql.Dataset
 # const JRelationalGroupedDataset = @jimport org.apache.spark.sql.RelationalGroupedDataset
-# const JGenericRow = @jimport org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
+
 # const JRowFactory = @jimport org.apache.spark.sql.RowFactory
+const JGenericRow = @jimport org.apache.spark.sql.catalyst.expressions.GenericRow
+const JGenericRowWithSchema = @jimport org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
 const JRow = @jimport org.apache.spark.sql.Row
 const JColumn = @jimport org.apache.spark.sql.Column
 const JDataType = @jimport org.apache.spark.sql.types.DataType
+const JMetadata = @jimport org.apache.spark.sql.types.Metadata
 const JStructType = @jimport org.apache.spark.sql.types.StructType
 const JStructField = @jimport org.apache.spark.sql.types.StructField
 const JSQLFunctions = @jimport org.apache.spark.sql.functions
@@ -164,6 +171,11 @@ function config(spark::SparkSession)
         ret[key] = val
     end
     return ret
+end
+
+
+function createDataFrame(spark::SparkSession, rows::Vector{Row}, st::StructType)
+    error("Not implemented yet")
 end
 
 ###############################################################################
@@ -344,7 +356,21 @@ when(col::Column, condition::Column, value) =
 #                                     Row                                     #
 ###############################################################################
 
-@chainable Row
+function Row(values...)
+    jrow = JGenericRow((Vector{JObject},), values)
+    jrow = convert(JRow, jrow)
+end
+
+function Row(; kv...)
+    fields = [StructField(k, v) for (k, v) in kv]
+    ks = map(string, keys(kv))
+    vs = values(values(kv))
+    jrow = JGenericRowWithSchema((Vector{JObject}, JStructType,), vs, )
+    jrow = convert(JRow, jrow)
+end
+
+
+
 function Base.show(io::IO, row::Row)
     str = jcall(row.jrow, "toString", JString)
     print(io, str)
@@ -391,6 +417,26 @@ Base.show(io::IO, st::StructType) = print(io, jcall(st.jst, "toString", JString)
 fieldNames(st::StructType) = convert(Vector{String}, jcall(st.jst, "fieldNames", Vector{JString}))
 Base.names(st::StructType) = fieldNames(st)
 
+
+###############################################################################
+#                                  StructField                                #
+###############################################################################
+
+struct StructField
+    jsf::JStructField
+end
+
+function StructField(name::String, typ::String, nullable::Bool)
+    dtyp = jcall(JDataType, "fromDDL", JDataType, (JString,), typ)
+    jsf = jcall(
+        JStructField, "apply", JStructField,
+        (JString, JDataType, jboolean, JMetadata),
+        name, dtyp, nullable, nothing
+    )
+    return StructField(jsf)
+end
+
+Base.show(io::IO, sf::StructField) = print(io, jcall(sf.jsf, "toString", JString))
 
 
 # function Base.getproperty(row::Row, prop::Symbol)

@@ -1,4 +1,17 @@
+const JSystem = @jimport java.lang.System
 global const SPARK_DEFAULT_PROPS = Dict()
+
+
+function set_log_level(log_level::String)
+    JLogger = @jimport org.apache.log4j.Logger
+    JLevel = @jimport org.apache.log4j.Level
+    level = jfield(JLevel, log_level, JLevel)
+    for logger_name in ("org", "akka")
+        logger = jcall(JLogger, "getLogger", JLogger, (JString,), logger_name)
+        jcall(logger, "setLevel", Nothing, (JLevel,), level)
+    end
+end
+
 
 function init(; log_level="WARN")
     if JavaCall.isloaded()
@@ -44,14 +57,7 @@ function init(; log_level="WARN")
 
     validateJavaVersion()
 
-    # set logging level
-    JLogger = @jimport org.apache.log4j.Logger
-    JLevel = @jimport org.apache.log4j.Level
-    level = jfield(JLevel, log_level, JLevel)
-    for logger_name in ("org", "akka")
-        logger = jcall(JLogger, "getLogger", JLogger, (JString,), logger_name)
-        jcall(logger, "setLevel", Nothing, (JLevel,), level)
-    end
+    set_log_level(log_level)
 
 end
 

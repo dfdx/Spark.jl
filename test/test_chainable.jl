@@ -1,3 +1,5 @@
+import Spark: @chainable
+
 struct Foo
     x::Int
 end

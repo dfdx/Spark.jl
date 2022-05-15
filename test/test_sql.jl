@@ -1,3 +1,5 @@
+using Spark.SQL
+
 
 @testset "builder" begin
     spark = SparkSession.builder.
@@ -41,6 +43,8 @@ end
     @test col.desc_nulls_first() isa Column
     @test col.desc_nulls_last() isa Column
 
+    # prints 'Exception in thread "main" java.lang.NoSuchMethodError: endsWith'
+    # but seems to work
     @test col.endswith("a") isa Column
     @test col.endswith(Column("other")) isa Column
 
@@ -62,6 +66,7 @@ end
 
     @test col.over() isa Column
 
+    # also complains about NoSuchMethodError, but seems to work
     @test col.startswith("a") isa Column
     @test col.startswith(Column("other")) isa Column
 
