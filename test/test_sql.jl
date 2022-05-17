@@ -1,7 +1,7 @@
 using Spark.SQL
 
 
-@testset "builder" begin
+@testset "Builder" begin
     spark = SparkSession.builder.
         appName("Hello").
         master("local").
@@ -16,7 +16,7 @@ using Spark.SQL
     spark.stop()
 end
 
-@testset "column" begin
+@testset "Column" begin
 
     col = Column("amount")
     for func in (+, -, *, /)
@@ -75,7 +75,7 @@ end
 end
 
 
-@testset "reader/writer" begin
+@testset "Reader/Writer" begin
     spark = SparkSession.builder.master("local").getOrCreate()
 
     # for REPL:
@@ -84,6 +84,18 @@ end
     df = spark.read.json(joinpath(data_dir, "people.json"))
 
     spark.stop()
+end
+
+
+@testset "StructType" begin
+    st = StructType()
+    @test length(st.fieldNames()) == 0
+
+    st = StructType(
+        StructField("name", "string", false),
+        StructField("age", "int", true)
+    )
+    @test st[1] == StructField("name", "string", false)
 end
 
 # @testset "sql" begin

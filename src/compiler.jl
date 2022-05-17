@@ -44,8 +44,8 @@ function create_class(name::String, src::String)
             nothing, nothing, nothing, [src_path])
         # load class
         jfile = JFile((JString,), root)
-        juri = jcall(jfile, "toURI", JURI)
-        jurl = jcall(juri, "toURL", JURL)
+        juri = jcall(jfile, "toURI", JURI, ())
+        jurl = jcall(juri, "toURL", JURL, ())
         jloader = jcall(JURLClassLoader, "newInstance", JURLClassLoader, (Vector{JURL},), [jurl])
         classforname(name, jloader)
     end

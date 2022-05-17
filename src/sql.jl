@@ -411,11 +411,31 @@ end
 #                                  StructType                                 #
 ###############################################################################
 
+StructType() = StructType(JStructType(()))
+
+function StructType(flds::StructField...)
+    st = StructType()
+    for fld in flds
+        st = add(st, fld)
+    end
+    return st
+end
+
 @chainable StructType
 Base.show(io::IO, st::StructType) = print(io, jcall(st.jst, "toString", JString))
 
 fieldNames(st::StructType) = convert(Vector{String}, jcall(st.jst, "fieldNames", Vector{JString}))
 Base.names(st::StructType) = fieldNames(st)
+
+
+add(st::StructType, sf::StructField) =
+    StructType(jcall(st.jst, "add", JStructType, (JStructField,), sf.jsf))
+
+Base.getindex(st::StructType, idx::Integer) =
+    StructField(jcall(st.jst, "apply", JStructField, (jint,), idx - 1))
+
+Base.getindex(st::StructType, name::String) =
+    StructField(jcall(st.jst, "apply", JStructField, (JString,), name))
 
 
 ###############################################################################
@@ -438,6 +458,8 @@ end
 
 Base.show(io::IO, sf::StructField) = print(io, jcall(sf.jsf, "toString", JString))
 
+Base.:(==)(st1::StructField, st2::StructField) =
+    Bool(jcall(st1.jsf, "equals", jboolean, (JObject,), st2.jsf))
 
 # function Base.getproperty(row::Row, prop::Symbol)
 #     if hasfield(Row, prop)
