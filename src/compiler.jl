@@ -38,7 +38,7 @@ function create_class(name::String, src::String)
             write(f, src)
         end
         # compile
-        jcompiler = jcall(JToolProvider, "getSystemJavaCompiler", JJavaCompiler)
+        jcompiler = jcall(JToolProvider, "getSystemJavaCompiler", JJavaCompiler, ())
         jcall(jcompiler, "run", jint,
             (JInputStream, JOutputStream, JOutputStream, Vector{JString}),
             nothing, nothing, nothing, [src_path])

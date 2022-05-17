@@ -1,5 +1,8 @@
+ENV["JULIA_COPY_STACKS"] = 1
+
 using Test
 using Spark
+
 
 Spark.init()
 Spark.set_log_level("ERROR")
