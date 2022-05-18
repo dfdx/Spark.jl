@@ -101,7 +101,7 @@ end
 javastring(::Type{JavaObject{name}}) where name = string(name)
 javastring(::Nothing) = ""
 
-javatype(tape::Tape, v::Variable) = JULIA_TO_JAVA_TYPES[typeof(tape[v].val)]
+javatype(tape::Tape, v::Variable) = julia2java(typeof(tape[v].val))
 javaname(v::Variable) = string(Umlaut.make_name(v.id))
 javaname(op::AbstractArray) = javaname(V(op))
 javaname(x) = x   # literals
@@ -253,7 +253,7 @@ function udf(f::Function, args...)
     class_expr.name = "julia2java." * class_expr.name
     UT = JavaTypeExpr(
         JavaCall.jimport("org.apache.spark.sql.api.java.UDF$(length(args))"),
-        [javastring(JULIA_TO_JAVA_TYPES[typeof(x)]) for x in [args...; val]]
+        [javastring(julia2java(typeof(x))) for x in [args...; val]]
     )
     class_expr.implements = UT
     meth_expr = class_expr.methods[1]

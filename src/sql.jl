@@ -1,6 +1,8 @@
 const JSparkConf = @jimport org.apache.spark.SparkConf
 const JSparkContext = @jimport org.apache.spark.SparkContext
 const JJavaSparkContext = @jimport org.apache.spark.api.java.JavaSparkContext
+const JRDD = @jimport org.apache.spark.rdd.RDD
+const JJavaRDD = @jimport org.apache.spark.api.java.JavaRDD
 
 const JSparkSession = @jimport org.apache.spark.sql.SparkSession
 const JSparkSessionBuilder = @jimport org.apache.spark.sql.SparkSession$Builder
@@ -20,25 +22,16 @@ const JStructType = @jimport org.apache.spark.sql.types.StructType
 const JStructField = @jimport org.apache.spark.sql.types.StructField
 const JSQLFunctions = @jimport org.apache.spark.sql.functions
 
+const JInteger = @jimport java.lang.Integer
 const JLong = @jimport java.lang.Long
+const JFloat = @jimport java.lang.Float
 const JDouble = @jimport java.lang.Double
 const JBoolean = @jimport java.lang.Boolean
 
-const JULIA_TO_JAVA_TYPES = Dict(
-    String => JString,
-    Integer => JLong,
-    Real => JDouble,
-    Float32 => JDouble,   # intentionally ignore bitness
-    Float64 => JDouble,
-    Bool => JBoolean
-)
+const JList = @jimport java.util.List
+const JArrayList = @jimport java.util.ArrayList
 
-const JAVA_TO_JULIA_TYPES = Dict(
-    JString => String,
-    JLong => Integer,
-    JDouble => Real,
-    JBoolean => Bool
-)
+
 
 ###############################################################################
 #                                Type Definitions                             #
@@ -76,6 +69,9 @@ struct StructType
     jst::JStructType
 end
 
+struct StructField
+    jsf::JStructField
+end
 
 
 ###############################################################################
@@ -89,6 +85,31 @@ Base.convert(::Type{JObject}, x::Column) = convert(JObject, x.jcol)
 Base.convert(::Type{Row}, obj::JObject) = Row(convert(JRow, obj))
 
 Base.convert(::Type{String}, obj::JString) = unsafe_string(obj)
+Base.convert(::Type{Integer}, obj::JLong) = jcall(obj, "longValue", jlong, ())
+
+julia2java(::Type{String}) = JString
+julia2java(::Type{Int64}) = JLong
+julia2java(::Type{Int32}) = JInt
+julia2java(::Type{Float64}) = JDouble
+julia2java(::Type{Float32}) = JFloat
+julia2java(::Type{Bool}) = JBoolean
+
+java2julia(::Type{JString}) = String
+java2julia(::Type{JLong}) = Int64
+java2julia(::Type{JInteger}) = Int32
+java2julia(::Type{JDouble}) = Float64
+java2julia(::Type{JFloat}) = Float32
+java2julia(::Type{JBoolean}) = Bool
+
+julia2ddl(::Type{String}) = "string"
+julia2ddl(::Type{Int64}) = "long"
+julia2ddl(::Type{Int32}) = "int"
+julia2ddl(::Type{Float64}) = "double"
+julia2ddl(::Type{Float32}) = "float"
+julia2ddl(::Type{Bool}) = "boolean"
+
+
+
 
 ###############################################################################
 #                            SparkSession.Builder                             #
@@ -107,7 +128,8 @@ function master(builder::SparkSessionBuilder, uri::String)
     return builder
 end
 
-for (T, JT) in JULIA_TO_JAVA_TYPES
+for JT in (JString, JDouble, JLong, JBoolean)
+    T = java2julia(JT)
     @eval function config(builder::SparkSessionBuilder, key::String, value::$T)
         jcall(builder.jbuilder, "config", JSparkSessionBuilder, (JString, $JT), key, value)
         return builder
@@ -174,9 +196,30 @@ function config(spark::SparkSession)
 end
 
 
-function createDataFrame(spark::SparkSession, rows::Vector{Row}, st::StructType)
-    error("Not implemented yet")
+function createDataFrame(spark::SparkSession, rows::Vector{Row}, sch::StructType)
+    if !isempty(rows)
+        row = rows[1]
+        if row.schema() != sch
+            @warn "Schema mismatch:\n\trow     : $(row.schema())\n\tprovided: $sch"
+        end
+    end
+    jrows = [row.jrow for row in rows]
+    jrows_arr = convert(JArrayList, jrows)
+    jdf = jcall(spark.jspark, "createDataFrame", JDataset, (JList, JStructType), jrows_arr, sch.jst)
+    return DataFrame(jdf)
 end
+
+function createDataFrame(spark::SparkSession, rows::Vector{Row}, sch::String)
+    st = StructType(sch)
+    return spark.createDataFrame(rows, st)
+end
+
+function createDataFrame(spark::SparkSession, rows::Vector{Row})
+    @assert !isempty(rows) "Cannot create a DataFrame from empty list of rows"
+    st = rows[1].schema()
+    return spark.createDataFrame(rows, st)
+end
+
 
 ###############################################################################
 #                                  DataFrame                                  #
@@ -356,19 +399,15 @@ when(col::Column, condition::Column, value) =
 #                                     Row                                     #
 ###############################################################################
 
-function Row(values...)
-    jrow = JGenericRow((Vector{JObject},), values)
-    jrow = convert(JRow, jrow)
-end
-
 function Row(; kv...)
-    fields = [StructField(k, v) for (k, v) in kv]
     ks = map(string, keys(kv))
-    vs = values(values(kv))
-    jrow = JGenericRowWithSchema((Vector{JObject}, JStructType,), vs, )
+    vs = collect(values(values(kv)))
+    flds = [StructField(k, julia2ddl(typeof(v)), true) for (k, v) in zip(ks, vs)]
+    st = StructType(flds...)
+    jrow = JGenericRowWithSchema((Vector{JObject}, JStructType,), vs, st.jst)
     jrow = convert(JRow, jrow)
+    return Row(jrow)
 end
-
 
 
 function Base.show(io::IO, row::Row)
@@ -381,7 +420,7 @@ function Base.getindex(row::Row, i::Integer)
     jobj = jcall(row.jrow, "get", JObject, (jint,), i - 1)
     class_name = getname(getclass(jobj))
     JT = JavaObject{Symbol(class_name)}
-    T = JAVA_TO_JULIA_TYPES[JT]
+    T = java2julia(JT)
     return convert(T, convert(JT, jobj))
     # TODO: test all 4 types
 end
@@ -421,6 +460,15 @@ function StructType(flds::StructField...)
     return st
 end
 
+function StructType(sch::String)
+    flds = StructField[]
+    for name_ddl in split(sch, ",")
+        name, ddl = split(strip(name_ddl), " ")
+        push!(flds, StructField(name, ddl, true))
+    end
+    return StructType(flds...)
+end
+
 @chainable StructType
 Base.show(io::IO, st::StructType) = print(io, jcall(st.jst, "toString", JString))
 
@@ -438,20 +486,20 @@ Base.getindex(st::StructType, name::String) =
     StructField(jcall(st.jst, "apply", JStructField, (JString,), name))
 
 
+Base.:(==)(st1::StructType, st2::StructType) =
+    Bool(jcall(st1.jst, "equals", jboolean, (JObject,), st2.jst))
+
 ###############################################################################
 #                                  StructField                                #
 ###############################################################################
 
-struct StructField
-    jsf::JStructField
-end
-
-function StructField(name::String, typ::String, nullable::Bool)
+function StructField(name::AbstractString, typ::AbstractString, nullable::Bool)
     dtyp = jcall(JDataType, "fromDDL", JDataType, (JString,), typ)
+    empty_metadata = jcall(JMetadata, "empty", JMetadata, ())
     jsf = jcall(
         JStructField, "apply", JStructField,
         (JString, JDataType, jboolean, JMetadata),
-        name, dtyp, nullable, nothing
+        name, dtyp, nullable, empty_metadata
     )
     return StructField(jsf)
 end

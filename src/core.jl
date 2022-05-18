@@ -20,23 +20,13 @@ include("streaming.jl")
 # provide a set of modules mimicing PySpark package layout
 
 module Compiler
-    import ..jcall2
-    export jcall2
-
-    import ..udf
-    export udf
+    using Reexport
+    @reexport import Spark: udf, jcall2
 end
 
 module SQL
     using Reexport
     @reexport import Spark: SparkSession, DataFrame, Column, Row
+    @reexport import Spark: StructType, StructField, DataType
     @reexport import Spark: config
-    # import ..SparkSession
-    # export SparkSession
-
-    # import ..DataFrame
-    # export DataFrame
-
-    # import ..Column
-    # export Column
 end

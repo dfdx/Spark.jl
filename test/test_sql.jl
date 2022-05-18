@@ -2,18 +2,18 @@ using Spark.SQL
 
 
 @testset "Builder" begin
-    spark = SparkSession.builder.
-        appName("Hello").
-        master("local").
-        config("some.key", "some-value").
-        getOrCreate()
-
     conf = config(spark)
     @test conf["spark.app.name"] == "Hello"
     @test conf["spark.master"] == "local"
     @test conf["some.key"] == "some-value"
+end
 
-    spark.stop()
+@testset "DataFrame" begin
+    rows = [Row(name="Alice", age=12), Row(name="Bob", age=32)]
+    @test spark.createDataFrame(rows) isa DataFrame
+    @test spark.createDataFrame(rows, StructType("name string, age long")) isa DataFrame
+
+
 end
 
 @testset "Column" begin
