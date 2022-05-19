@@ -13,7 +13,18 @@ end
     @test spark.createDataFrame(rows) isa DataFrame
     @test spark.createDataFrame(rows, StructType("name string, age long")) isa DataFrame
 
+    df = spark.createDataFrame(rows)
+    @test df.columns() == ["name", "age"]
+    @test df.first() == rows[1]
+    @test df.head() == rows[1]
+    @test df.head(2) == rows
+    @test df.take(1) == rows[1:1]
+    @test df.collect() == rows
+    @test df.count() == 2
 
+    @test df.select("age", "name").columns() == ["age", "name"]
+    rows = df.select(Column("age") + 1).collect()
+    @test [row[1] for row in rows] == [13, 33]
 end
 
 @testset "Column" begin

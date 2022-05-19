@@ -227,6 +227,7 @@ end
 
 Base.show(df::DataFrame) = jcall(df.jdf, "show", Nothing)
 Base.show(io::IO, df::DataFrame) = show(df)
+printSchema(df::DataFrame) = jcall(df.jdf, "printSchema", jvoid, ())
 
 
 function Base.getindex(df::DataFrame, name::String)
@@ -252,6 +253,8 @@ function columns(df::DataFrame)
 end
 
 
+Base.count(df::DataFrame) = jcall(df.jdf, "count", jlong)
+Base.first(df::DataFrame) = Row(jcall(df.jdf, "first", JObject))
 
 head(df::DataFrame) = Row(jcall(df.jdf, "head", JObject))
 function  head(df::DataFrame, n::Integer)
@@ -259,8 +262,23 @@ function  head(df::DataFrame, n::Integer)
     jrows = convert(Vector{JRow}, jobjs)
     return map(Row, jrows)
 end
-Base.first(df::DataFrame) = Row(jcall(df.jdf, "first", JObject))
-Base.count(df::DataFrame) = jcall(df.jdf, "count", jlong)
+
+function Base.collect(df::DataFrame)
+    jobj = jcall(df.jdf, "collect", JObject, ())
+    jrows = convert(Vector{JRow}, jobj)
+    return map(Row, jrows)
+end
+
+take(df::DataFrame, n::Integer) =
+    convert(Vector{Row}, jcall(df.jdf, "take", JObject, (jint,), n))
+
+
+function select(df::DataFrame, cols::Column...)
+    jdf = jcall(df.jdf, "select", JDataset, (Vector{JColumn},),
+                [col.jcol for col in cols])
+    return DataFrame(jdf)
+end
+select(df::DataFrame, cols::String...) = select(df, map(Column, cols)...)
 
 ###############################################################################
 #                                DataFrameReader                              #
@@ -444,6 +462,10 @@ function Base.getproperty(row::Row, prop::Symbol)
         return DotChainer(row, fn)
     end
 end
+
+
+Base.:(==)(row1::Row, row2::Row) =
+    Bool(jcall(row1.jrow, "equals", jboolean, (JObject,), row2.jrow))
 
 
 ###############################################################################
