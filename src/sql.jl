@@ -179,25 +179,6 @@ function Base.read(spark::SparkSession)
     return DataFrameReader(jreader)
 end
 
-# # build-time config
-# function config(spark::SparkSession)
-#     jctx = jcall(spark.jspark, "sparkContext", JSparkContext, ())
-#     jconf = jcall(jctx, "getConf", JSparkConf, ())
-#     entries = jcall(jconf, "getAll", Vector{@jimport scala.Tuple2}, ())
-#     ret = Dict{String, Any}()
-#     for e in entries
-#         key = convert(JString, jcall(e, "_1", JObject, ())) |> unsafe_string
-#         jval = jcall(e, "_2", JObject, ())
-#         cls_name = getname(getclass(jval))
-#         val = if cls_name == "java.lang.String"
-#             unsafe_string(convert(JString, jval))
-#         else
-#             "(value type $cls_name is not supported)"
-#         end
-#         ret[key] = val
-#     end
-#     return ret
-# end
 
 # runtime config
 function conf(spark::SparkSession)
@@ -235,7 +216,6 @@ end
 #                                RuntimeConfig                                #
 ###############################################################################
 
-# only supports set() and get(), most options should be set on builder instead
 @chainable RuntimeConfig
 Base.show(io::IO, cnf::RuntimeConfig) = print(io, "RuntimeConfig()")
 
@@ -268,7 +248,7 @@ end
 for JT in (JString, JLong, JBoolean)
     T = java2julia(JT)
     @eval function set(cnf::RuntimeConfig, key::String, value::$T)
-        jcall(cnf.jconf, "set", jvoid, (JString, $JT), key, value)
+        jcall(cnf.jconf, "set", Nothing, (JString, $JT), key, value)
     end
 end
 
@@ -278,7 +258,7 @@ end
 
 Base.show(df::DataFrame) = jcall(df.jdf, "show", Nothing)
 Base.show(io::IO, df::DataFrame) = show(df)
-printSchema(df::DataFrame) = jcall(df.jdf, "printSchema", jvoid, ())
+printSchema(df::DataFrame) = jcall(df.jdf, "printSchema", Nothing, ())
 
 
 function Base.getindex(df::DataFrame, name::String)
@@ -320,8 +300,15 @@ function Base.collect(df::DataFrame)
     return map(Row, jrows)
 end
 
-take(df::DataFrame, n::Integer) =
-    convert(Vector{Row}, jcall(df.jdf, "take", JObject, (jint,), n))
+function take(df::DataFrame, n::Integer)
+    return convert(Vector{Row}, jcall(df.jdf, "take", JObject, (jint,), n))
+end
+
+
+function describe(df::DataFrame, cols::String...)
+    jdf = jcall(df.jdf, "describe", JDataset, (Vector{JString},), collect(cols))
+    return DataFrame(jdf)
+end
 
 
 function select(df::DataFrame, cols::Column...)
@@ -330,6 +317,18 @@ function select(df::DataFrame, cols::Column...)
     return DataFrame(jdf)
 end
 select(df::DataFrame, cols::String...) = select(df, map(Column, cols)...)
+
+
+function withColumn(df::DataFrame, name::String, col::Column)
+    jdf = jcall(df.jdf, "withColumn", JDataset, (JString, JColumn), name, col.jcol)
+    return DataFrame(jdf)
+end
+
+
+function Base.filter(df::DataFrame, col::Column)
+    jdf = jcall(df.jdf, "filter", JDataset, (JColumn,), col.jcol)
+    return DataFrame(jdf)
+end
 
 ###############################################################################
 #                                DataFrameReader                              #
@@ -436,7 +435,7 @@ eqNullSafe(col::Column, other) =
 Base.:(==)(col::Column, other) = Column(jcall(col.jcol, "equalTo", JColumn, (JObject,), other))
 Base.:(!=)(col::Column, other) = Column(jcall(col.jcol, "notEqual", JColumn, (JObject,), other))
 
-explain(col::Column, extended=false) = jcall(col.jcol, "explain", jvoid, (jboolean,), extended)
+explain(col::Column, extended=false) = jcall(col.jcol, "explain", Nothing, (jboolean,), extended)
 
 isNotNull(col::Column) = Column(jcall(col.jcol, "isNotNull", JColumn))
 isNull(col::Column) = Column(jcall(col.jcol, "isNull", JColumn))
@@ -462,6 +461,17 @@ substr(col::Column, start::Integer, len::Integer) =
 
 when(col::Column, condition::Column, value) =
     Column(jcall(col.jcol, "when", JColumn, (JColumn, JObject), condition.jcol, value))
+
+
+## JSQLFunctions
+
+upper(col::Column) =
+    Column(jcall(JSQLFunctions, "upper", JColumn, (JColumn,), col.jcol))
+Base.uppercase(col::Column) = upper(col)
+
+lower(col::Column) =
+    Column(jcall(JSQLFunctions, "lower", JColumn, (JColumn,), col.jcol))
+Base.lowercase(col::Column) = lower(col)
 
 
 ###############################################################################

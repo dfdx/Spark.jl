@@ -33,6 +33,12 @@ end
     @test df.select("age", "name").columns() == ["age", "name"]
     rows = df.select(Column("age") + 1).collect()
     @test [row[1] for row in rows] == [13, 33]
+
+    rows = df.withColumn("inc_age", df.age + 1).collect()
+    @test [row[3] for row in rows] == [13, 33]
+
+    @test df.filter(df.name == "Alice").first().age == 12
+
 end
 
 @testset "Column" begin
