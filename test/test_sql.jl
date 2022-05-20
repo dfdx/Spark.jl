@@ -2,10 +2,18 @@ using Spark.SQL
 
 
 @testset "Builder" begin
-    conf = config(spark)
-    @test conf["spark.app.name"] == "Hello"
-    @test conf["spark.master"] == "local"
-    @test conf["some.key"] == "some-value"
+    cnf = spark.conf.getAll()
+    @test cnf["spark.app.name"] == "Hello"
+    @test cnf["spark.master"] == "local"
+    @test cnf["some.key"] == "some-value"
+end
+
+@testset "RuntimeConfig" begin
+    @test spark.conf.get("spark.app.name") == "Hello"
+    spark.conf.set("another.key", "another-value")
+    @test spark.conf.get("another.key") == "another-value"
+    @test spark.conf.get("non.existing", "default-value") == "default-value"
+
 end
 
 @testset "DataFrame" begin

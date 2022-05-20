@@ -1,4 +1,5 @@
 const JSparkConf = @jimport org.apache.spark.SparkConf
+const JRuntimeConfig = @jimport org.apache.spark.sql.RuntimeConfig
 const JSparkContext = @jimport org.apache.spark.SparkContext
 const JJavaSparkContext = @jimport org.apache.spark.api.java.JavaSparkContext
 const JRDD = @jimport org.apache.spark.rdd.RDD
@@ -43,6 +44,10 @@ end
 
 struct SparkSession
     jspark::JSparkSession
+end
+
+struct RuntimeConfig
+    jconf::JRuntimeConfig
 end
 
 struct DataFrame
@@ -174,25 +179,30 @@ function Base.read(spark::SparkSession)
     return DataFrameReader(jreader)
 end
 
+# # build-time config
+# function config(spark::SparkSession)
+#     jctx = jcall(spark.jspark, "sparkContext", JSparkContext, ())
+#     jconf = jcall(jctx, "getConf", JSparkConf, ())
+#     entries = jcall(jconf, "getAll", Vector{@jimport scala.Tuple2}, ())
+#     ret = Dict{String, Any}()
+#     for e in entries
+#         key = convert(JString, jcall(e, "_1", JObject, ())) |> unsafe_string
+#         jval = jcall(e, "_2", JObject, ())
+#         cls_name = getname(getclass(jval))
+#         val = if cls_name == "java.lang.String"
+#             unsafe_string(convert(JString, jval))
+#         else
+#             "(value type $cls_name is not supported)"
+#         end
+#         ret[key] = val
+#     end
+#     return ret
+# end
 
-function config(spark::SparkSession)
-    # spark.sparkContext.getConf().getAll()
-    jctx = jcall(spark.jspark, "sparkContext", JSparkContext)
-    jconf = jcall(jctx, "getConf", JSparkConf)
-    entries = jcall(jconf, "getAll", Vector{@jimport scala.Tuple2})
-    ret = Dict{String, Any}()
-    for e in entries
-        key = convert(JString, jcall(e, "_1", JObject)) |> unsafe_string
-        jval = jcall(e, "_2", JObject)
-        cls_name = getname(getclass(jval))
-        val = if cls_name == "java.lang.String"
-            unsafe_string(convert(JString, jval))
-        else
-            "(value type $cls_name is not supported)"
-        end
-        ret[key] = val
-    end
-    return ret
+# runtime config
+function conf(spark::SparkSession)
+    jconf = jcall(spark.jspark, "conf", JRuntimeConfig, ())
+    return RuntimeConfig(jconf)
 end
 
 
@@ -220,6 +230,47 @@ function createDataFrame(spark::SparkSession, rows::Vector{Row})
     return spark.createDataFrame(rows, st)
 end
 
+
+###############################################################################
+#                                RuntimeConfig                                #
+###############################################################################
+
+# only supports set() and get(), most options should be set on builder instead
+@chainable RuntimeConfig
+Base.show(io::IO, cnf::RuntimeConfig) = print(io, "RuntimeConfig()")
+
+Base.get(cnf::RuntimeConfig, name::String) =
+    jcall(cnf.jconf, "get", JString, (JString,), name)
+Base.get(cnf::RuntimeConfig, name::String, default::String) =
+    jcall(cnf.jconf, "get", JString, (JString, JString), name, default)
+
+
+function getAll(cnf::RuntimeConfig)
+    jmap = jcall(cnf.jconf, "getAll", @jimport(scala.collection.immutable.Map), ())
+    jiter = jcall(jmap, "iterator", @jimport(scala.collection.Iterator), ())
+    ret = Dict{String, Any}()
+    while Bool(jcall(jiter, "hasNext", jboolean, ()))
+        jobj = jcall(jiter, "next", JObject, ())
+        e = convert(@jimport(scala.Tuple2), jobj)
+        key = convert(JString, jcall(e, "_1", JObject, ())) |> unsafe_string
+        jval = jcall(e, "_2", JObject, ())
+        cls_name = getname(getclass(jval))
+        val = if cls_name == "java.lang.String"
+            unsafe_string(convert(JString, jval))
+        else
+            "(value type $cls_name is not supported)"
+        end
+        ret[key] = val
+    end
+    return ret
+end
+
+for JT in (JString, JLong, JBoolean)
+    T = java2julia(JT)
+    @eval function set(cnf::RuntimeConfig, key::String, value::$T)
+        jcall(cnf.jconf, "set", jvoid, (JString, $JT), key, value)
+    end
+end
 
 ###############################################################################
 #                                  DataFrame                                  #

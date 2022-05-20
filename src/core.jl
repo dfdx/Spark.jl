@@ -11,6 +11,11 @@ include("compiler.jl")
 include("sql.jl")
 include("streaming.jl")
 
+
+function __init__()
+    init()
+end
+
 # mostly unsupported RDD interface
 # include("rdd/core.jl")
 
