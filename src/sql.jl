@@ -56,7 +56,7 @@ end
 
 # here we use PySpark's name, not the underlying Scala's name
 struct GroupedData
-    jgroup::JRelationalGroupedDataset
+    jgdf::JRelationalGroupedDataset
 end
 
 struct DataFrameReader
@@ -283,7 +283,7 @@ function Base.getproperty(df::DataFrame, prop::Symbol)
 end
 
 function columns(df::DataFrame)
-    jnames = jcall(df.jdf, "columns", Vector{JString})
+    jnames = jcall(df.jdf, "columns", Vector{JString}, ())
     names = [unsafe_string(jn) for jn in jnames]
     return names
 end
@@ -337,15 +337,15 @@ end
 
 
 function groupby(df::DataFrame, cols::Column...)
-    jgroup = jcall(df.jdf, "groupBy", JRelationalGroupedDataset,
+    jgdf = jcall(df.jdf, "groupBy", JRelationalGroupedDataset,
             (Vector{JColumn},), [col.jcol for col in cols])
-    return GroupedData(jgroup)
+    return GroupedData(jgdf)
 end
 
 function groupby(df::DataFrame, col::String, cols::String...)
-    jgroup = jcall(df.jdf, "groupBy", JRelationalGroupedDataset,
+    jgdf = jcall(df.jdf, "groupBy", JRelationalGroupedDataset,
             (JString, Vector{JString},), col, collect(cols))
-    return GroupedData(jgroup)
+    return GroupedData(jgdf)
 end
 
 const groupBy = groupby
@@ -356,13 +356,19 @@ const groupBy = groupby
 ###############################################################################
 
 @chainable GroupedData
-Base.show(io::IO, gd::GroupedData) = print(io, "GroupedData()")
+Base.show(io::IO, gdf::GroupedData) = print(io, "GroupedData()")
 
-function agg(group::GroupedData, col::Column, cols::Column...)
-    jdf = jcall(group.jgroup, "agg", JDataset,
+function agg(gdf::GroupedData, col::Column, cols::Column...)
+    jdf = jcall(gdf.jgdf, "agg", JDataset,
             (JColumn, Vector{JColumn}), col.jcol, [col.jcol for col in cols])
     return DataFrame(jdf)
 end
+
+# TODO: test for ^
+# TODO: version with map (using java.util.Map)
+# TODO: min, max, etc.
+# TODO: .sql(), .registerAsTempSomething
+
 
 ###############################################################################
 #                                DataFrameReader                              #
