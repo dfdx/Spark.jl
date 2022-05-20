@@ -31,7 +31,7 @@ end
 
 module SQL
     using Reexport
-    @reexport import Spark: SparkSession, DataFrame, Column, Row
+    @reexport import Spark: SparkSession, DataFrame, GroupedData, Column, Row
     @reexport import Spark: StructType, StructField, DataType
     @reexport import Spark: config
 end

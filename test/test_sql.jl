@@ -41,6 +41,20 @@ end
 
 end
 
+@testset "GroupedData" begin
+    data = [
+        ["red", "banana", 1, 10], ["blue", "banana", 2, 20], ["red", "carrot", 3, 30],
+        ["blue", "grape", 4, 40], ["red", "carrot", 5, 50], ["black", "carrot", 6, 60],
+        ["red", "banana", 7, 70], ["red", "grape", 8, 80]
+    ]
+    rows = [Row(color=d[1], fruit=d[2], v1=d[3], v2=d[4]) for d in data]
+    df = spark.createDataFrame(rows)
+
+    group = df.groupby("fruit")
+    @test group isa GroupedData
+
+end
+
 @testset "Column" begin
 
     col = Column("amount")
