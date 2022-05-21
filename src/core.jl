@@ -1,6 +1,7 @@
 using JavaCall
 using Umlaut
 import Umlaut.V
+import Statistics
 # using TableTraits
 # using IteratorInterfaceExtensions
 

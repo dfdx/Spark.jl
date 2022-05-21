@@ -1,3 +1,6 @@
+import Base: min, max, minimum, maximum, sum, count
+import Statistics: mean
+
 const JSparkConf = @jimport org.apache.spark.SparkConf
 const JRuntimeConfig = @jimport org.apache.spark.sql.RuntimeConfig
 const JSparkContext = @jimport org.apache.spark.SparkContext
@@ -29,11 +32,16 @@ const JFloat = @jimport java.lang.Float
 const JDouble = @jimport java.lang.Double
 const JBoolean = @jimport java.lang.Boolean
 
+const JMap = @jimport java.util.Map
+const JHashMap = @jimport java.util.HashMap
 const JList = @jimport java.util.List
 const JArrayList = @jimport java.util.ArrayList
 # const JArrayBuffer = @jimport scala.collection.mutable.ArrayBuffer
 const JWrappedArray = @jimport scala.collection.mutable.WrappedArray
 const JSeq = @jimport scala.collection.Seq
+# const JIMap = @jimport scala.collection.Map
+# const JTuple2 = @jimport scala.Tuple2
+# const JJavaConverters = @jimport scala.collection.JavaConverters
 
 
 
@@ -138,12 +146,22 @@ function JArray(x::Vector{T}) where T
 end
 
 
-function JSeq(x::Vector)
+function Base.convert(::Type{JSeq}, x::Vector)
     jarr = JArray(x)
     jobj = convert(JObject, jarr)
     jwa = jcall(JWrappedArray, "make", JWrappedArray, (JObject,), jobj)
     return jcall(jwa, "toSeq", JSeq, ())
 end
+
+function Base.convert(::Type{JMap}, d::Dict)
+    jmap = JHashMap(())
+    for (k, v) in d
+        jk, jv = convert(JObject, k), convert(JObject, v)
+        jcall(jmap, "put", JObject, (JObject, JObject), jk, jv)
+    end
+    return jmap
+end
+
 
 ###############################################################################
 #                            SparkSession.Builder                             #
@@ -336,6 +354,11 @@ function Base.collect(df::DataFrame)
     return map(Row, jrows)
 end
 
+function Base.collect(df::DataFrame, col::Union{<:AbstractString, <:Integer})
+    rows = collect(df)
+    return [row[col] for row in rows]
+end
+
 function take(df::DataFrame, n::Integer)
     return convert(Vector{Row}, jcall(df.jdf, "take", JObject, (jint,), n))
 end
@@ -381,6 +404,16 @@ end
 
 const groupBy = groupby
 
+for func in (:min, :max,  :count, :sum, :mean)
+    @eval function $func(df::DataFrame, cols::String...)
+        jdf = jcall(df.jdf, string($func), JDataset, (Vector{JString},), collect(cols))
+        return DataFrame(jdf)
+    end
+end
+
+minimum(df::DataFrame, cols::String...) = min(df, cols...)
+maximum(df::DataFrame, cols::String...) = max(df, cols...)
+avg(df::DataFrame, cols::String...) = mean(df, cols...)
 
 ###############################################################################
 #                                  GroupedData                                #
@@ -395,8 +428,24 @@ function agg(gdf::GroupedData, col::Column, cols::Column...)
     return DataFrame(jdf)
 end
 
-# TODO: test for ^
-# TODO: version with map (using java.util.Map)
+function agg(gdf::GroupedData, ops::Dict{<:AbstractString, <:AbstractString})
+    jmap = convert(JMap, ops)
+    jdf = jcall(gdf.jgdf, "agg", JDataset, (JMap,), jmap)
+    return DataFrame(jdf)
+end
+
+for func in (:min, :max,  :count, :sum, :mean)
+    @eval function $func(gdf::GroupedData, cols::String...)
+        jdf = jcall(gdf.jgdf, string($func), JDataset, (Vector{JString},), collect(cols))
+        return DataFrame(jdf)
+    end
+end
+
+minimum(gdf::GroupedData, cols::String...) = min(gdf, cols...)
+maximum(gdf::GroupedData, cols::String...) = max(gdf, cols...)
+avg(gdf::GroupedData, cols::String...) = mean(gdf, cols...)
+
+
 # TODO: min, max, etc.
 # TODO: .sql(), .registerAsTempSomething
 
@@ -545,6 +594,20 @@ lower(col::Column) =
 Base.lowercase(col::Column) = lower(col)
 
 
+for func in (:min, :max,  :count, :sum, :mean)
+    @eval function $func(col::Column)
+        jcol = jcall(JSQLFunctions, string($func), JColumn, (JColumn,), col.jcol)
+        return Column(jcol)
+    end
+end
+
+Base.minimum(col::Column) = min(col)
+Base.maximum(col::Column) = max(col)
+avg(col::Column) = mean(col::Column)
+
+
+
+
 ###############################################################################
 #                                     Row                                     #
 ###############################################################################
@@ -560,7 +623,7 @@ function Row(; kv...)
 end
 
 function Row(vals::Vector)
-    jseq = JSeq(vals)
+    jseq = convert(JSeq, vals)
     jrow = jcall(JRow, "fromSeq", JRow, (JSeq,), jseq)
     return Row(jrow)
 end
@@ -637,7 +700,7 @@ function StructType(sch::Vector{<:AbstractString})
     return StructType(flds...)
 end
 
-function StructType(sch::AbstractString)
+function StructType(sch::String)
     return StructType(split(sch, ","))
 end
 

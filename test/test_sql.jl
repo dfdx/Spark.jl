@@ -48,12 +48,20 @@ end
         ["red", "banana", 7, 70], ["red", "grape", 8, 80]
     ]
     sch = ["color string", "fruit string", "v1 long", "v2 long"]
-    # rows = [Row(color=d[1], fruit=d[2], v1=d[3], v2=d[4]) for d in data]
-    # df = spark.createDataFrame(rows)
     df = spark.createDataFrame(data, sch)
 
-    group = df.groupby("fruit")
-    @test group isa GroupedData
+    gdf = df.groupby("fruit")
+    @test gdf isa GroupedData
+
+    df_agg = gdf.agg(min(df.v1), max(df.v2))
+    @test df_agg.collect("min(v1)") == [4, 1, 3]
+    @test df_agg.collect("max(v2)") == [80, 70, 60]
+
+    df_agg = gdf.agg(Dict("v1" => "min", "v2" => "max"))
+    @test df_agg.collect("min(v1)") == [4, 1, 3]
+    @test df_agg.collect("max(v2)") == [80, 70, 60]
+
+    @test gdf.sum("v1").select(mean(Column("sum(v1)"))).collect(1)[1] == 12.0
 
 end
 

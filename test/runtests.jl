@@ -2,9 +2,8 @@ ENV["JULIA_COPY_STACKS"] = 1
 
 using Test
 using Spark
+import Statistics.mean
 
-
-Spark.init()
 Spark.set_log_level("ERROR")
 
 spark = Spark.SparkSession.builder.
