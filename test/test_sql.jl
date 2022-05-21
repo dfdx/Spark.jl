@@ -8,12 +8,16 @@ using Spark.SQL
     @test cnf["some.key"] == "some-value"
 end
 
+@testset "SparkSession" begin
+    df = spark.sql("select 1 as num")
+    @test df.collect("num") == [1]
+end
+
 @testset "RuntimeConfig" begin
     @test spark.conf.get("spark.app.name") == "Hello"
     spark.conf.set("another.key", "another-value")
     @test spark.conf.get("another.key") == "another-value"
     @test spark.conf.get("non.existing", "default-value") == "default-value"
-
 end
 
 @testset "DataFrame" begin
@@ -38,6 +42,9 @@ end
     @test [row[3] for row in rows] == [13, 33]
 
     @test df.filter(df.name == "Alice").first().age == 12
+
+    df.createOrReplaceTempView("people")
+    @test spark.sql("select count(*) from people").first()[1] == 2
 
 end
 
@@ -67,13 +74,13 @@ end
 
 @testset "Column" begin
 
-    col = Column("amount")
+    col = Column("x")
     for func in (+, -, *, /)
         @test func(col, 1) isa Column
         @test func(col, 1.0) isa Column
     end
 
-    @test col.alias("money") isa Column
+    @test col.alias("y") isa Column
     @test col.asc() isa Column
     @test col.asc_nulls_first() isa Column
     @test col.asc_nulls_last() isa Column
@@ -121,6 +128,8 @@ end
 
     @test col.substr(Column("start"), Column("len")) isa Column
     @test col.substr(0, 3) isa Column
+
+    @test col.explode() |> string == "col(\"explode(x)\")"
 end
 
 
@@ -147,39 +156,3 @@ end
     @test st[1] == StructField("name", "string", false)
 end
 
-# @testset "sql" begin
-
-# using DataFrames
-
-# sess = SparkSession()
-
-# Spark.set_log_level(Spark.context(sess), "ERROR")
-
-# # testing IO
-# ds = read_json(sess, joinpath(@__DIR__, "people.json"))
-# @test count(ds) == 2
-
-# mktempdir() do dir
-#     parquet_file = joinpath(dir, "people.parquet")
-
-#     write_parquet(ds, parquet_file)
-#     ds2 = read_parquet(sess, parquet_file)
-#     write_json(ds2, joinpath(dir, "people2.json"))
-
-#     @test count(ds2) == 2
-# end
-
-# # testing sql
-# Spark.create_temp_view(ds, "people")
-# ds_all = sql(sess, "SELECT * from people")
-
-# @test Spark.as_named_tuple(Spark.head(ds_all)) == (age = 32, name = "Peter")
-
-# # test conversion to DataFrames
-# df = DataFrame(ds_all)
-# @test nrow(df) == 2
-# @test ncol(df) == 2
-
-# close(sess)
-
-# end

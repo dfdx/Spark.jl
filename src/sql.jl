@@ -266,6 +266,11 @@ function createDataFrame(spark::SparkSession, rows::Vector{Row})
 end
 
 
+function sql(spark::SparkSession, query::String)
+    jdf = jcall(spark.jspark, "sql", JDataset, (JString,), query)
+    return DataFrame(jdf)
+end
+
 ###############################################################################
 #                                RuntimeConfig                                #
 ###############################################################################
@@ -414,6 +419,10 @@ end
 minimum(df::DataFrame, cols::String...) = min(df, cols...)
 maximum(df::DataFrame, cols::String...) = max(df, cols...)
 avg(df::DataFrame, cols::String...) = mean(df, cols...)
+
+
+createOrReplaceTempView(df::DataFrame, name::AbstractString) =
+    jcall(df.jdf, "createOrReplaceTempView", Nothing, (JString,), name)
 
 ###############################################################################
 #                                  GroupedData                                #
@@ -603,9 +612,11 @@ end
 
 Base.minimum(col::Column) = min(col)
 Base.maximum(col::Column) = max(col)
-avg(col::Column) = mean(col::Column)
+avg(col::Column) = mean(col)
 
 
+explode(col::Column) =
+    Column(jcall(JSQLFunctions, "explode", JColumn, (JColumn,), col.jcol))
 
 
 ###############################################################################
