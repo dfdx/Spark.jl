@@ -31,6 +31,9 @@ const JBoolean = @jimport java.lang.Boolean
 
 const JList = @jimport java.util.List
 const JArrayList = @jimport java.util.ArrayList
+# const JArrayBuffer = @jimport scala.collection.mutable.ArrayBuffer
+const JWrappedArray = @jimport scala.collection.mutable.WrappedArray
+const JSeq = @jimport scala.collection.Seq
 
 
 
@@ -103,6 +106,7 @@ julia2java(::Type{Int32}) = JInt
 julia2java(::Type{Float64}) = JDouble
 julia2java(::Type{Float32}) = JFloat
 julia2java(::Type{Bool}) = JBoolean
+julia2java(::Type{Any}) = JObject
 
 java2julia(::Type{JString}) = String
 java2julia(::Type{JLong}) = Int64
@@ -110,6 +114,7 @@ java2julia(::Type{JInteger}) = Int32
 java2julia(::Type{JDouble}) = Float64
 java2julia(::Type{JFloat}) = Float32
 java2julia(::Type{JBoolean}) = Bool
+java2julia(::Type{JObject}) = Any
 
 julia2ddl(::Type{String}) = "string"
 julia2ddl(::Type{Int64}) = "long"
@@ -119,7 +124,26 @@ julia2ddl(::Type{Float32}) = "float"
 julia2ddl(::Type{Bool}) = "boolean"
 
 
+function JArray(x::Vector{T}) where T
+    JT = T <: JavaObject ? T : julia2java(T)
+    x = convert(Vector{JT}, x)
+    sz = length(x)
+    init_val = sz == 0 ? C_NULL : Ptr(x[1])
+    arrayptr = JavaCall.JNI.NewObjectArray(sz, Ptr(JavaCall.metaclass(JT)), init_val)
+    arrayptr === C_NULL && geterror()
+    for i=2:sz
+        JavaCall.JNI.SetObjectArrayElement(arrayptr, i-1, Ptr(x[i]))
+    end
+    return JavaObject{typeof(x)}(arrayptr)
+end
 
+
+function JSeq(x::Vector)
+    jarr = JArray(x)
+    jobj = convert(JObject, jarr)
+    jwa = jcall(JWrappedArray, "make", JWrappedArray, (JObject,), jobj)
+    return jcall(jwa, "toSeq", JSeq, ())
+end
 
 ###############################################################################
 #                            SparkSession.Builder                             #
@@ -195,7 +219,8 @@ end
 function createDataFrame(spark::SparkSession, rows::Vector{Row}, sch::StructType)
     if !isempty(rows)
         row = rows[1]
-        if row.schema() != sch
+        rsch = row.schema()
+        if !isnothing(rsch) && rsch != sch
             @warn "Schema mismatch:\n\trow     : $(row.schema())\n\tprovided: $sch"
         end
     end
@@ -205,7 +230,13 @@ function createDataFrame(spark::SparkSession, rows::Vector{Row}, sch::StructType
     return DataFrame(jdf)
 end
 
-function createDataFrame(spark::SparkSession, rows::Vector{Row}, sch::String)
+function createDataFrame(spark::SparkSession, rows::Vector{Row}, sch::Union{String, Vector{String}})
+    st = StructType(sch)
+    return spark.createDataFrame(rows, st)
+end
+
+function createDataFrame(spark::SparkSession, data::Vector{Vector{Any}}, sch::Union{String, Vector{String}})
+    rows = map(Row, data)
     st = StructType(sch)
     return spark.createDataFrame(rows, st)
 end
@@ -528,6 +559,16 @@ function Row(; kv...)
     return Row(jrow)
 end
 
+function Row(vals::Vector)
+    jseq = JSeq(vals)
+    jrow = jcall(JRow, "fromSeq", JRow, (JSeq,), jseq)
+    return Row(jrow)
+end
+
+function Row(vals...)
+    return Row(collect(vals))
+end
+
 
 function Base.show(io::IO, row::Row)
     str = jcall(row.jrow, "toString", JString, ())
@@ -549,14 +590,18 @@ function Base.getindex(row::Row, name::String)
     return row[i + 1]
 end
 
-
-schema(row::Row) = StructType(jcall(row.jrow, "schema", JStructType, ()))
+function schema(row::Row)
+    jst = jcall(row.jrow, "schema", JStructType, ())
+    return isnull(jst) ? nothing : StructType(jst)
+end
 
 
 function Base.getproperty(row::Row, prop::Symbol)
     if hasfield(Row, prop)
         return getfield(row, prop)
-    elseif string(prop) in names(schema(row))
+    end
+    sch = schema(row)
+    if !isnothing(sch) && string(prop) in names(sch)
         return row[string(prop)]
     else
         fn = getfield(@__MODULE__, prop)
@@ -583,14 +628,19 @@ function StructType(flds::StructField...)
     return st
 end
 
-function StructType(sch::String)
+function StructType(sch::Vector{<:AbstractString})
     flds = StructField[]
-    for name_ddl in split(sch, ",")
+    for name_ddl in sch
         name, ddl = split(strip(name_ddl), " ")
         push!(flds, StructField(name, ddl, true))
     end
     return StructType(flds...)
 end
+
+function StructType(sch::AbstractString)
+    return StructType(split(sch, ","))
+end
+
 
 @chainable StructType
 Base.show(io::IO, st::StructType) = print(io, jcall(st.jst, "toString", JString, ()))
