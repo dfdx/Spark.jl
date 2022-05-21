@@ -61,6 +61,7 @@ function Base.read(spark::SparkSession)
     return DataFrameReader(jreader)
 end
 
+# note: write() method is defined in dataframe.jl
 
 # runtime config
 function conf(spark::SparkSession)

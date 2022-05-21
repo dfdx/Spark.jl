@@ -16,7 +16,6 @@ spark = Spark.SparkSession.builder.
 include("test_chainable.jl")
 include("test_compiler.jl")
 include("test_sql.jl")
-include("test_streaming.jl")
 
 spark.stop()
 

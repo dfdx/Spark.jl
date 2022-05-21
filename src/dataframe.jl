@@ -147,3 +147,9 @@ end
 minimum(gdf::GroupedData, cols::String...) = min(gdf, cols...)
 maximum(gdf::GroupedData, cols::String...) = max(gdf, cols...)
 avg(gdf::GroupedData, cols::String...) = mean(gdf, cols...)
+
+
+function Base.write(df::DataFrame)
+    jwriter = jcall(df.jdf, "write", JDataFrameWriter, ())
+    return DataFrameWriter(jwriter)
+end

@@ -146,14 +146,17 @@ end
 
 
 @testset "Reader/Writer" begin
-    spark = SparkSession.builder.master("local").getOrCreate()
-
     # for REPL:
     # data_dir = joinpath(@__DIR__, "test", "data")
     data_dir = joinpath(@__DIR__, "data")
-    df = spark.read.json(joinpath(data_dir, "people.json"))
-
-    spark.stop()
+    mktempdir(; prefix="spark-jl-") do tmp_dir
+        df = spark.read.json(joinpath(data_dir, "people.json"))
+        df.write.mode("overwrite").parquet(joinpath(tmp_dir, "people.parquet"))
+        df = spark.read.parquet(joinpath(tmp_dir, "people.parquet"))
+        df.write.mode("overwrite").orc(joinpath(tmp_dir, "people.orc"))
+        df = spark.read.orc(joinpath(tmp_dir, "people.orc"))
+        @test df.collect("name") |> Set == Set(["Peter", "Belle"])
+    end
 end
 
 
