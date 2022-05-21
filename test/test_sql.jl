@@ -42,6 +42,18 @@ end
     @test [row[3] for row in rows] == [13, 33]
 
     @test df.filter(df.name == "Alice").first().age == 12
+    @test df.where(df.name == "Alice").first().age == 12
+
+    df2 = spark.createDataFrame(
+        [Any["Alice", "Smith"], ["Emily", "Clark"]],
+        "first_name string, last_name string"
+    )
+    joined_df = df.join(df2, df.name == df2.first_name)
+    @test joined_df.columns() == ["name", "age", "first_name", "last_name"]
+    @test joined_df.count() == 1
+
+    joined_df = df.join(df2, df.name == df2.first_name, "outer")
+    @test joined_df.count() == 3
 
     df.createOrReplaceTempView("people")
     @test spark.sql("select count(*) from people").first()[1] == 2

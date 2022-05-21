@@ -393,7 +393,7 @@ function Base.filter(df::DataFrame, col::Column)
     jdf = jcall(df.jdf, "filter", JDataset, (JColumn,), col.jcol)
     return DataFrame(jdf)
 end
-
+where(df::DataFrame, col::Column) = filter(df, col)
 
 function groupby(df::DataFrame, cols::Column...)
     jgdf = jcall(df.jdf, "groupBy", JRelationalGroupedDataset,
@@ -420,6 +420,13 @@ minimum(df::DataFrame, cols::String...) = min(df, cols...)
 maximum(df::DataFrame, cols::String...) = max(df, cols...)
 avg(df::DataFrame, cols::String...) = mean(df, cols...)
 
+
+function Base.join(df1::DataFrame, df2::DataFrame, col::Column, typ::String="inner")
+    jdf = jcall(df1.jdf, "join", JDataset,
+            (JDataset, JColumn, JString),
+            df2.jdf, col.jcol, typ)
+    return DataFrame(jdf)
+end
 
 createOrReplaceTempView(df::DataFrame, name::AbstractString) =
     jcall(df.jdf, "createOrReplaceTempView", Nothing, (JString,), name)
@@ -453,10 +460,6 @@ end
 minimum(gdf::GroupedData, cols::String...) = min(gdf, cols...)
 maximum(gdf::GroupedData, cols::String...) = max(gdf, cols...)
 avg(gdf::GroupedData, cols::String...) = mean(gdf, cols...)
-
-
-# TODO: min, max, etc.
-# TODO: .sql(), .registerAsTempSomething
 
 
 ###############################################################################
