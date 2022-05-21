@@ -9,16 +9,21 @@ import Statistics
 include("chainable.jl")
 include("init.jl")
 include("compiler.jl")
-include("sql.jl")
-include("streaming.jl")
+include("defs.jl")
+include("convert.jl")
+include("session.jl")
+include("dataframe.jl")
+include("column.jl")
+include("row.jl")
+include("struct.jl")
+include("io.jl")
+# include("sql.jl")
+# include("streaming.jl")
 
 
 function __init__()
     init()
 end
-
-# mostly unsupported RDD interface
-# include("rdd/core.jl")
 
 
 # During development we use just include("core.jl") and get a single
