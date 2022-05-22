@@ -1,4 +1,6 @@
-ENV["JULIA_COPY_STACKS"] = 1
+if Sys.isunix()
+    ENV["JULIA_COPY_STACKS"] = 1
+end
 
 using Test
 using Spark

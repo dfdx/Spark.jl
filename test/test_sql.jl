@@ -167,7 +167,7 @@ end
 
 @testset "Window" begin
     # how can we do these tests more robust?
-    @test Window.partitionBy(Column("x")).orderBy(Column("y")) isa WindowSpec
+    @test Window.partitionBy(Column("x")).orderBy(Column("y").desc()) isa WindowSpec
     @test Window.partitionBy("x").orderBy("y") isa WindowSpec
     @test Window.partitionBy("x").orderBy("y").rowsBetween(-3, 3) isa WindowSpec
     @test Window.partitionBy("x").orderBy("y").rangeBetween(-3, 3) isa WindowSpec

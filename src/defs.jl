@@ -12,6 +12,8 @@ const JSparkSession = @jimport org.apache.spark.sql.SparkSession
 const JSparkSessionBuilder = @jimport org.apache.spark.sql.SparkSession$Builder
 const JDataFrameReader = @jimport org.apache.spark.sql.DataFrameReader
 const JDataFrameWriter = @jimport org.apache.spark.sql.DataFrameWriter
+const JDataStreamReader = @jimport org.apache.spark.sql.streaming.DataStreamReader
+const JDataStreamWriter = @jimport org.apache.spark.sql.streaming.DataStreamWriter
 const JDataset = @jimport org.apache.spark.sql.Dataset
 const JRelationalGroupedDataset = @jimport org.apache.spark.sql.RelationalGroupedDataset
 
@@ -38,12 +40,9 @@ const JMap = @jimport java.util.Map
 const JHashMap = @jimport java.util.HashMap
 const JList = @jimport java.util.List
 const JArrayList = @jimport java.util.ArrayList
-# const JArrayBuffer = @jimport scala.collection.mutable.ArrayBuffer
 const JWrappedArray = @jimport scala.collection.mutable.WrappedArray
 const JSeq = @jimport scala.collection.Seq
-# const JIMap = @jimport scala.collection.Map
-# const JTuple2 = @jimport scala.Tuple2
-# const JJavaConverters = @jimport scala.collection.JavaConverters
+
 
 
 
@@ -67,17 +66,9 @@ struct DataFrame
     jdf::JDataset
 end
 
-# here we use PySpark's name, not the underlying Scala's name
+# here we use PySpark's type name, not the underlying Scala's name
 struct GroupedData
     jgdf::JRelationalGroupedDataset
-end
-
-struct DataFrameReader
-    jreader::JDataFrameReader
-end
-
-struct DataFrameWriter
-    jwriter::JDataFrameWriter
 end
 
 struct Column
@@ -102,4 +93,20 @@ end
 
 struct WindowSpec
     jwin::JWindowSpec
+end
+
+struct DataFrameReader
+    jreader::JDataFrameReader
+end
+
+struct DataFrameWriter
+    jwriter::JDataFrameWriter
+end
+
+struct DataStreamReader
+    jstream::JDataStreamReader
+end
+
+struct DataStreamWriter
+    jstream::JDataStreamWriter
 end
