@@ -145,21 +145,11 @@ end
 
     @test (col.window("10 minutes", "5 minutes", "15 minutes") |> string ==
             """col("timewindow(x, 600000000, 300000000, 900000000) AS `window`")""")
-end
+    @test (col.window("10 minutes", "5 minutes") |> string ==
+            """col("timewindow(x, 600000000, 300000000, 0) AS `window`")""")
+    @test (col.window("10 minutes") |> string ==
+            """col("timewindow(x, 600000000, 600000000, 0) AS `window`")""")
 
-
-@testset "Reader/Writer" begin
-    # for REPL:
-    # data_dir = joinpath(@__DIR__, "test", "data")
-    data_dir = joinpath(@__DIR__, "data")
-    mktempdir(; prefix="spark-jl-") do tmp_dir
-        df = spark.read.json(joinpath(data_dir, "people.json"))
-        df.write.mode("overwrite").parquet(joinpath(tmp_dir, "people.parquet"))
-        df = spark.read.parquet(joinpath(tmp_dir, "people.parquet"))
-        df.write.mode("overwrite").orc(joinpath(tmp_dir, "people.orc"))
-        df = spark.read.orc(joinpath(tmp_dir, "people.orc"))
-        @test df.collect("name") |> Set == Set(["Peter", "Belle"])
-    end
 end
 
 
@@ -174,3 +164,27 @@ end
     @test st[1] == StructField("name", "string", false)
 end
 
+
+@testset "Window" begin
+    # how can we do these tests more robust?
+    @test Window.partitionBy(Column("x")).orderBy(Column("y")) isa WindowSpec
+    @test Window.partitionBy("x").orderBy("y") isa WindowSpec
+    @test Window.partitionBy("x").orderBy("y").rowsBetween(-3, 3) isa WindowSpec
+    @test Window.partitionBy("x").orderBy("y").rangeBetween(-3, 3) isa WindowSpec
+    @test Window.partitionBy("x").rangeBetween(Window.unboundedPreceding, Window.unboundedFollowing) isa WindowSpec
+    @test Window.partitionBy("x").rangeBetween(Window.unboundedPreceding, Window.currentRow) isa WindowSpec
+end
+
+@testset "Reader/Writer" begin
+    # for REPL:
+    # data_dir = joinpath(@__DIR__, "test", "data")
+    data_dir = joinpath(@__DIR__, "data")
+    mktempdir(; prefix="spark-jl-") do tmp_dir
+        df = spark.read.json(joinpath(data_dir, "people.json"))
+        df.write.mode("overwrite").parquet(joinpath(tmp_dir, "people.parquet"))
+        df = spark.read.parquet(joinpath(tmp_dir, "people.parquet"))
+        df.write.mode("overwrite").orc(joinpath(tmp_dir, "people.orc"))
+        df = spark.read.orc(joinpath(tmp_dir, "people.orc"))
+        @test df.collect("name") |> Set == Set(["Peter", "Belle"])
+    end
+end

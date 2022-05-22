@@ -40,7 +40,7 @@ end
 ###############################################################################
 
 @chainable DataFrameWriter
-Base.show(io::IO, ::DataFrameReader) = print(io, "DataFrameWriter()")
+Base.show(io::IO, ::DataFrameWriter) = print(io, "DataFrameWriter()")
 
 
 function format(writer::DataFrameWriter, fmt::String)

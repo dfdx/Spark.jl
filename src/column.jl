@@ -127,3 +127,14 @@ function window(col::Column, w_dur::String, slide_dur::String, start_time::Strin
                         col.jcol, w_dur, slide_dur, start_time))
 end
 
+function window(col::Column, w_dur::String, slide_dur::String)
+    return Column(jcall(JSQLFunctions, "window", JColumn,
+                        (JColumn, JString, JString),
+                        col.jcol, w_dur, slide_dur))
+end
+
+function window(col::Column, w_dur::String)
+    return Column(jcall(JSQLFunctions, "window", JColumn,
+                        (JColumn, JString),
+                        col.jcol, w_dur))
+end

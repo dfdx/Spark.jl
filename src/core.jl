@@ -18,8 +18,7 @@ include("row.jl")
 include("struct.jl")
 include("window.jl")
 include("io.jl")
-# include("sql.jl")
-# include("streaming.jl")
+include("streaming.jl")
 
 
 function __init__()
@@ -40,5 +39,5 @@ module SQL
     using Reexport
     @reexport import Spark: SparkSession, DataFrame, GroupedData, Column, Row
     @reexport import Spark: StructType, StructField, DataType
-    @reexport import Spark: config
+    @reexport import Spark: Window, WindowSpec
 end

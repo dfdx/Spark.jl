@@ -97,9 +97,9 @@ struct StructField
 end
 
 struct Window
-    jwindow::JWindow
+    jwin::JWindow
 end
 
 struct WindowSpec
-    jwindow::JWindowSpec
+    jwin::JWindowSpec
 end
