@@ -3,6 +3,7 @@ environment:
   - julia_version: 1.6
   - julia_version: 1.7
   - julia_version: nightly
+  JULIA_COPY_STACKS:
 
 platform:
   - x86 # 32-bit

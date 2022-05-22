@@ -25,6 +25,8 @@ const JMetadata = @jimport org.apache.spark.sql.types.Metadata
 const JStructType = @jimport org.apache.spark.sql.types.StructType
 const JStructField = @jimport org.apache.spark.sql.types.StructField
 const JSQLFunctions = @jimport org.apache.spark.sql.functions
+const JWindow = @jimport org.apache.spark.sql.expressions.Window
+const JWindowSpec = @jimport org.apache.spark.sql.expressions.WindowSpec
 
 const JInteger = @jimport java.lang.Integer
 const JLong = @jimport java.lang.Long
@@ -92,4 +94,12 @@ end
 
 struct StructField
     jsf::JStructField
+end
+
+struct Window
+    jwindow::JWindow
+end
+
+struct WindowSpec
+    jwindow::JWindowSpec
 end

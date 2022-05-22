@@ -141,7 +141,10 @@ end
     @test col.substr(Column("start"), Column("len")) isa Column
     @test col.substr(0, 3) isa Column
 
-    @test col.explode() |> string == "col(\"explode(x)\")"
+    @test col.explode() |> string == """col("explode(x)")"""
+
+    @test (col.window("10 minutes", "5 minutes", "15 minutes") |> string ==
+            """col("timewindow(x, 600000000, 300000000, 900000000) AS `window`")""")
 end
 
 
