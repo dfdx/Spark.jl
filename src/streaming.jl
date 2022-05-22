@@ -2,7 +2,6 @@
 #                                DataStreamReader                             #
 ###############################################################################
 
-
 Base.show(io::IO, stream::DataStreamReader) = print(io, "DataStreamReader()")
 @chainable DataStreamReader
 
@@ -20,38 +19,27 @@ end
 
 
 for (T, JT) in [(String, JString), (Integer, jlong), (Real, jdouble), (Bool, jboolean)]
-    @eval function option(reader::DataStreamReader, key::String, value::$T)
-        jcall(reader.jstream, "option", JDataStreamReader, (JString, $JT), key, value)
-        return reader
+    @eval function option(stream::DataStreamReader, key::String, value::$T)
+        jcall(stream.jstream, "option", JDataStreamReader, (JString, $JT), key, value)
+        return stream
     end
 end
 
-# function option(stream::DataStreamReader, key::String, val::String)
-#     jstream = jcall(stream.jstream, "option", JDataStreamReader, (JString, JString), key, val)
-#     return DataStreamReader(jstream)
-# end
-
-# function option(stream::DataStreamReader, key::String, val::Integer)
-#     jstream = jcall(stream.jstream, "option", JDataStreamReader, (JString, jint), key, val)
-#     return DataStreamReader(jstream)
-# end
-
-
-### #
-
-
-
 
 for func in (:csv, :json, :parquet, :orc, :text, :textFile)
-    @eval function $func(reader::DataFrameReader, paths::String...)
-        jdf = jcall(reader.jreader, string($func), JDataset, (Vector{JString},), collect(paths))
+    @eval function $func(stream::DataStreamReader, path::String)
+        jdf = jcall(stream.jstream, string($func), JDataset, (JString,), path)
         return DataFrame(jdf)
     end
 end
 
 
-function load(reader::DataFrameReader, paths::String...)
-    # TODO: test with zero paths
-    jdf = jcall(reader.jreader, "load", JDataset, (Vector{JString},), collect(paths))
+function load(stream::DataStreamReader, path::String)
+    jdf = jcall(stream.jstream, "load", JDataset, (JString,), path)
+    return DataFrame(jdf)
+end
+
+function load(stream::DataStreamReader)
+    jdf = jcall(stream.jstream, "load", JDataset, ())
     return DataFrame(jdf)
 end

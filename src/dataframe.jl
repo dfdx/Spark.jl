@@ -118,6 +118,10 @@ end
 createOrReplaceTempView(df::DataFrame, name::AbstractString) =
     jcall(df.jdf, "createOrReplaceTempView", Nothing, (JString,), name)
 
+
+isstreaming(df::DataFrame) = Bool(jcall(df.jdf, "isStreaming", jboolean, ()))
+isStreaming(df::DataFrame) = isstreaming(df)
+
 ###############################################################################
 #                                  GroupedData                                #
 ###############################################################################
