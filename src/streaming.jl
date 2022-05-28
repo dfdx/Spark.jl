@@ -7,7 +7,7 @@ Base.show(io::IO, stream::DataStreamReader) = print(io, "DataStreamReader()")
 
 
 function readStream(spark::SparkSession)
-    jreader = jcall(spark.jspark, "readStream", JDataStreamReader)
+    jreader = jcall(spark.jspark, "readStream", JDataStreamReader, ())
     return DataStreamReader(jreader)
 end
 
