@@ -20,7 +20,6 @@ jobs:
           - '1.7'
         os:
           - ubuntu-latest
-          - windows-latest
         arch:
           - x64
     steps:
