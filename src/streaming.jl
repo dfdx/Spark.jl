@@ -85,10 +85,13 @@ end
 
 
 function foreach(writer::DataStreamWriter, jfew::JObject)
-    JForeachWriter = @jimport(org.apache.spark.sql.ForeachWriter)
-    jfew = convert(JForeachWriter, jfew)
-    jwriter = jcall(writer.jwriter, "foreach", JDataStreamWriter, (JForeachWriter,), jfew)
-    return DataStreamWriter(jwriter)
+    # Spark doesn't automatically distribute dynamically created objects to workers
+    # Thus I turn off this feature for now
+    error("Not implemented yet")
+    # JForeachWriter = @jimport(org.apache.spark.sql.ForeachWriter)
+    # jfew = convert(JForeachWriter, jfew)
+    # jwriter = jcall(writer.jwriter, "foreach", JDataStreamWriter, (JForeachWriter,), jfew)
+    # return DataStreamWriter(jwriter)
 end
 
 

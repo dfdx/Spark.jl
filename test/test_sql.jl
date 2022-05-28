@@ -213,27 +213,27 @@ end
     query.stop()
     @test !query.isActive()
 
-    df = spark.readStream.schema(sch).json(data_dir)
-    jfew = create_instance("""
-        package spark.jl;
-        import java.io.Serializable;
-        import org.apache.spark.sql.ForeachWriter;
+    # df = spark.readStream.schema(sch).json(data_dir)
+    # jfew = create_instance("""
+    #     package spark.jl;
+    #     import java.io.Serializable;
+    #     import org.apache.spark.sql.ForeachWriter;
 
-        class JuliaWriter extends ForeachWriter<String> implements Serializable {
-            private static final long serialVersionUID = 1L;
+    #     class JuliaWriter extends ForeachWriter<String> implements Serializable {
+    #         private static final long serialVersionUID = 1L;
 
-            @Override public boolean open(long partitionId, long version) {
-                return true;
-            }
+    #         @Override public boolean open(long partitionId, long version) {
+    #             return true;
+    #         }
 
-            @Override public void process(String record) {
-              System.out.println(record);
-            }
+    #         @Override public void process(String record) {
+    #           System.out.println(record);
+    #         }
 
-            @Override public void close(Throwable errorOrNull) {
-            }
-          }
-    """)
-    query = df.writeStream.foreach(jfew).start()
+    #         @Override public void close(Throwable errorOrNull) {
+    #         }
+    #       }
+    # """)
+    # query = df.writeStream.foreach(jfew).start()
 
 end

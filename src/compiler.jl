@@ -2,18 +2,19 @@ using JavaCall
 import JavaCall: assertroottask_or_goodenv, assertloaded, get_method_id
 using Umlaut
 
+const JInMemoryJavaCompiler = @jimport org.mdkt.compiler.InMemoryJavaCompiler
 
-const JDynamicJavaCompiler = @jimport org.apache.spark.api.julia.DynamicJavaCompiler
+# const JDynamicJavaCompiler = @jimport org.apache.spark.api.julia.DynamicJavaCompiler
 
-const JFile = @jimport java.io.File
-const JToolProvider = @jimport javax.tools.ToolProvider
-const JJavaCompiler = @jimport javax.tools.JavaCompiler
-const JInputStream = @jimport java.io.InputStream
-const JOutputStream = @jimport java.io.OutputStream
-const JClassLoader = @jimport java.lang.ClassLoader
-const JURLClassLoader = @jimport java.net.URLClassLoader
-const JURI = @jimport java.net.URI
-const JURL = @jimport java.net.URL
+# const JFile = @jimport java.io.File
+# const JToolProvider = @jimport javax.tools.ToolProvider
+# const JJavaCompiler = @jimport javax.tools.JavaCompiler
+# const JInputStream = @jimport java.io.InputStream
+# const JOutputStream = @jimport java.io.OutputStream
+# const JClassLoader = @jimport java.lang.ClassLoader
+# const JURLClassLoader = @jimport java.net.URLClassLoader
+# const JURI = @jimport java.net.URI
+# const JURL = @jimport java.net.URL
 
 const JUDF1 = @jimport org.apache.spark.sql.api.java.UDF1
 
@@ -22,36 +23,10 @@ const JUDF1 = @jimport org.apache.spark.sql.api.java.UDF1
 #                                  Compiler                                   #
 ###############################################################################
 
-function JavaCall.classforname(name::String, loader)
-    return jcall(JClass, "forName", JClass, (JString, jboolean, JClassLoader),
-                 name, true, loader)
-end
-
 
 function create_class(name::String, src::String)
-    # based on https://stackoverflow.com/a/2946402
-    cls = mktempdir(; prefix="jj-") do root
-        # write source to a file
-        elems = split(name, ".")
-        pkg_path = joinpath(root, elems[1:end-1]...)
-        mkpath(pkg_path)
-        src_path = joinpath(pkg_path, elems[end] * ".java")
-        open(src_path, "w") do f
-            Base.write(f, src)
-        end
-        # compile
-        jcompiler = jcall(JToolProvider, "getSystemJavaCompiler", JJavaCompiler, ())
-        jcall(jcompiler, "run", jint,
-            (JInputStream, JOutputStream, JOutputStream, Vector{JString}),
-            nothing, nothing, nothing, [src_path])
-        # load class
-        jfile = JFile((JString,), root)
-        juri = jcall(jfile, "toURI", JURI, ())
-        jurl = jcall(juri, "toURL", JURL, ())
-        jloader = jcall(JURLClassLoader, "newInstance", JURLClassLoader, (Vector{JURL},), [jurl])
-        classforname(name, jloader)
-    end
-    return cls
+    jcompiler = jcall(JInMemoryJavaCompiler, "newInstance", JInMemoryJavaCompiler, ())
+    return jcall(jcompiler, "compile", JClass, (JString, JString), name, src)
 end
 
 
