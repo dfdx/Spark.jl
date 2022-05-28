@@ -3,6 +3,8 @@ import JavaCall: assertroottask_or_goodenv, assertloaded, get_method_id
 using Umlaut
 
 
+const JDynamicJavaCompiler = @jimport org.apache.spark.api.julia.DynamicJavaCompiler
+
 const JFile = @jimport java.io.File
 const JToolProvider = @jimport javax.tools.ToolProvider
 const JJavaCompiler = @jimport javax.tools.JavaCompiler
@@ -35,7 +37,7 @@ function create_class(name::String, src::String)
         mkpath(pkg_path)
         src_path = joinpath(pkg_path, elems[end] * ".java")
         open(src_path, "w") do f
-            write(f, src)
+            Base.write(f, src)
         end
         # compile
         jcompiler = jcall(JToolProvider, "getSystemJavaCompiler", JJavaCompiler, ())

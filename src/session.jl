@@ -29,7 +29,7 @@ function enableHiveSupport(builder::SparkSessionBuilder)
 end
 
 function getOrCreate(builder::SparkSessionBuilder)
-    config(builder, "spark.jars", joinpath(dirname(@__FILE__), "..", "jvm", "sparkjl", "target", "sparkjl-0.1.jar"))
+    config(builder, "spark.jars", joinpath(dirname(@__FILE__), "..", "jvm", "sparkjl", "target", "sparkjl-0.2.jar"))
     jspark = jcall(builder.jbuilder, "getOrCreate", JSparkSession, ())
     return SparkSession(jspark)
 end
@@ -56,7 +56,7 @@ Base.close(spark::SparkSession) = jcall(spark.jspark, "close", Nothing, ())
 stop(spark::SparkSession) = jcall(spark.jspark, "stop", Nothing, ())
 
 
-function Base.read(spark::SparkSession)
+function read(spark::SparkSession)
     jreader = jcall(spark.jspark, "read", JDataFrameReader, ())
     return DataFrameReader(jreader)
 end

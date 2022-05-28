@@ -3,7 +3,13 @@
 ###############################################################################
 
 Base.show(df::DataFrame) = jcall(df.jdf, "show", Nothing, ())
-Base.show(io::IO, df::DataFrame) = show(df)
+function Base.show(io::IO, df::DataFrame)
+    if df.isstreaming()
+        print(io, "DataFrame(...streaming...)")
+    else
+        show(df)
+    end
+end
 printSchema(df::DataFrame) = jcall(df.jdf, "printSchema", Nothing, ())
 
 
@@ -122,12 +128,23 @@ createOrReplaceTempView(df::DataFrame, name::AbstractString) =
 isstreaming(df::DataFrame) = Bool(jcall(df.jdf, "isStreaming", jboolean, ()))
 isStreaming(df::DataFrame) = isstreaming(df)
 
+
+function writeStream(df::DataFrame)
+    jwriter = jcall(df.jdf, "writeStream", JDataStreamWriter, ())
+    return DataStreamWriter(jwriter)
+end
+
+
 ###############################################################################
 #                                  GroupedData                                #
 ###############################################################################
 
 @chainable GroupedData
-Base.show(io::IO, gdf::GroupedData) = print(io, "GroupedData()")
+function Base.show(io::IO, gdf::GroupedData)
+    repr = jcall(gdf.jgdf, "toString", JString, ())
+    repr = replace(repr, "RelationalGroupedDataset" => "GroupedData")
+    print(io, repr)
+end
 
 function agg(gdf::GroupedData, col::Column, cols::Column...)
     jdf = jcall(gdf.jgdf, "agg", JDataset,
@@ -141,7 +158,7 @@ function agg(gdf::GroupedData, ops::Dict{<:AbstractString, <:AbstractString})
     return DataFrame(jdf)
 end
 
-for func in (:min, :max,  :count, :sum, :mean)
+for func in (:min, :max, :sum, :mean)
     @eval function $func(gdf::GroupedData, cols::String...)
         jdf = jcall(gdf.jgdf, string($func), JDataset, (Vector{JString},), collect(cols))
         return DataFrame(jdf)
@@ -152,8 +169,11 @@ minimum(gdf::GroupedData, cols::String...) = min(gdf, cols...)
 maximum(gdf::GroupedData, cols::String...) = max(gdf, cols...)
 avg(gdf::GroupedData, cols::String...) = mean(gdf, cols...)
 
+Base.count(gdf::GroupedData) =
+    DataFrame(jcall(gdf.jgdf, "count", JDataset, ()))
 
-function Base.write(df::DataFrame)
+
+function write(df::DataFrame)
     jwriter = jcall(df.jdf, "write", JDataFrameWriter, ())
     return DataFrameWriter(jwriter)
 end

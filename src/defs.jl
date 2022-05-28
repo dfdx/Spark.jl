@@ -14,6 +14,7 @@ const JDataFrameReader = @jimport org.apache.spark.sql.DataFrameReader
 const JDataFrameWriter = @jimport org.apache.spark.sql.DataFrameWriter
 const JDataStreamReader = @jimport org.apache.spark.sql.streaming.DataStreamReader
 const JDataStreamWriter = @jimport org.apache.spark.sql.streaming.DataStreamWriter
+const JStreamingQuery = @jimport org.apache.spark.sql.streaming.StreamingQuery
 const JDataset = @jimport org.apache.spark.sql.Dataset
 const JRelationalGroupedDataset = @jimport org.apache.spark.sql.RelationalGroupedDataset
 
@@ -40,8 +41,9 @@ const JMap = @jimport java.util.Map
 const JHashMap = @jimport java.util.HashMap
 const JList = @jimport java.util.List
 const JArrayList = @jimport java.util.ArrayList
-const JWrappedArray = @jimport scala.collection.mutable.WrappedArray
-const JSeq = @jimport scala.collection.Seq
+# const JWrappedArray = @jimport scala.collection.mutable.WrappedArray
+const JArraySeq = @jimport scala.collection.mutable.ArraySeq
+const JSeq = @jimport scala.collection.immutable.Seq
 
 
 
@@ -104,9 +106,13 @@ struct DataFrameWriter
 end
 
 struct DataStreamReader
-    jstream::JDataStreamReader
+    jreader::JDataStreamReader
 end
 
 struct DataStreamWriter
-    jstream::JDataStreamWriter
+    jwriter::JDataStreamWriter
+end
+
+struct StreamingQuery
+    jquery::JStreamingQuery
 end

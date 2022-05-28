@@ -120,6 +120,9 @@ avg(col::Column) = mean(col)
 explode(col::Column) =
     Column(jcall(JSQLFunctions, "explode", JColumn, (JColumn,), col.jcol))
 
+Base.split(col::Column, sep::AbstractString) =
+    Column(jcall(JSQLFunctions, "split", JColumn, (JColumn, JString), col.jcol, sep))
+
 
 function window(col::Column, w_dur::String, slide_dur::String, start_time::String)
     return Column(jcall(JSQLFunctions, "window", JColumn,

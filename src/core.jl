@@ -32,7 +32,7 @@ end
 
 module Compiler
     using Reexport
-    @reexport import Spark: udf, jcall2
+    @reexport import Spark: udf, jcall2, create_instance, create_class
 end
 
 module SQL

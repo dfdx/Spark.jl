@@ -3,7 +3,6 @@
 ###############################################################################
 
 @chainable WindowSpec
-# @chainable Type{Window}
 
 function Base.getproperty(W::Type{Window}, prop::Symbol)
     if hasfield(typeof(W), prop)
@@ -13,19 +12,6 @@ function Base.getproperty(W::Type{Window}, prop::Symbol)
     else
         fn = getfield(@__MODULE__, prop)
         return DotChainer(W, fn)
-    end
-end
-
-function Base.getproperty(row::Row, prop::Symbol)
-    if hasfield(Row, prop)
-        return getfield(row, prop)
-    end
-    sch = schema(row)
-    if !isnothing(sch) && string(prop) in names(sch)
-        return row[string(prop)]
-    else
-        fn = getfield(@__MODULE__, prop)
-        return DotChainer(row, fn)
     end
 end
 

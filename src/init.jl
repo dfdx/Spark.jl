@@ -25,9 +25,9 @@ function init(; log_level="WARN")
         for x in readdir(joinpath(shome, "jars"))
             JavaCall.addClassPath(joinpath(shome, "jars", x))
         end
-        JavaCall.addClassPath(joinpath(dirname(@__FILE__), "..", "jvm", "sparkjl", "target", "sparkjl-0.1.jar"))
+        JavaCall.addClassPath(joinpath(dirname(@__FILE__), "..", "jvm", "sparkjl", "target", "sparkjl-0.2.jar"))
     else
-        JavaCall.addClassPath(joinpath(dirname(@__FILE__), "..", "jvm", "sparkjl", "target", "sparkjl-0.1-assembly.jar"))
+        JavaCall.addClassPath(joinpath(dirname(@__FILE__), "..", "jvm", "sparkjl", "target", "sparkjl-0.2-assembly.jar"))
     end
     for y in split(get(ENV, "SPARK_DIST_CLASSPATH", ""), [':',';'], keepempty=false)
         JavaCall.addClassPath(String(y))

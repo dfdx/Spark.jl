@@ -1,4 +1,5 @@
 using Spark.SQL
+using Spark.Compiler
 
 
 @testset "Builder" begin
@@ -143,12 +144,14 @@ end
 
     @test col.explode() |> string == """col("explode(x)")"""
 
+    @test col.split("|") |> string == """col("split(x, |, -1)")"""
+
     @test (col.window("10 minutes", "5 minutes", "15 minutes") |> string ==
-            """col("timewindow(x, 600000000, 300000000, 900000000) AS `window`")""")
+            """col("window(x, 600000000, 300000000, 900000000) AS window")""")
     @test (col.window("10 minutes", "5 minutes") |> string ==
-            """col("timewindow(x, 600000000, 300000000, 0) AS `window`")""")
+            """col("window(x, 600000000, 300000000, 0) AS window")""")
     @test (col.window("10 minutes") |> string ==
-            """col("timewindow(x, 600000000, 600000000, 0) AS `window`")""")
+            """col("window(x, 600000000, 600000000, 0) AS window")""")
 
 end
 
@@ -194,13 +197,43 @@ end
     # for REPL:
     # data_dir = joinpath(@__DIR__, "test", "data")
     data_dir = joinpath(@__DIR__, "data")
-    mktempdir(; prefix="spark-jl-") do tmp_dir
-        df = spark.readStream.json(joinpath(data_dir, "people.json"))
-        @test df.isstreaming()
-        df.write.mode("overwrite").parquet(joinpath(tmp_dir, "people.parquet"))
-        df = spark.read.parquet(joinpath(tmp_dir, "people.parquet"))
-        df.write.mode("overwrite").orc(joinpath(tmp_dir, "people.orc"))
-        df = spark.read.orc(joinpath(tmp_dir, "people.orc"))
-        @test df.collect("name") |> Set == Set(["Peter", "Belle"])
-    end
+    sch = StructType("name string, age long")
+    # df = spark.readStream.schema(sch).json(joinpath(data_dir, "people.json"))
+    df = spark.readStream.schema(sch).json(data_dir)
+    @test df.isstreaming()
+    query = df.writeStream.
+        format("console").
+        option("numRows", 5).
+        outputMode("append").
+        start()
+    query.explain()
+    query.explain(true)
+    @test query.isActive()
+    query.awaitTermination(100)
+    query.stop()
+    @test !query.isActive()
+
+    df = spark.readStream.schema(sch).json(data_dir)
+    jfew = create_instance("""
+        package spark.jl;
+        import java.io.Serializable;
+        import org.apache.spark.sql.ForeachWriter;
+
+        class JuliaWriter extends ForeachWriter<String> implements Serializable {
+            private static final long serialVersionUID = 1L;
+
+            @Override public boolean open(long partitionId, long version) {
+                return true;
+            }
+
+            @Override public void process(String record) {
+              System.out.println(record);
+            }
+
+            @Override public void close(Throwable errorOrNull) {
+            }
+          }
+    """)
+    query = df.writeStream.foreach(jfew).start()
+
 end

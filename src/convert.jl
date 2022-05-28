@@ -52,8 +52,11 @@ end
 function Base.convert(::Type{JSeq}, x::Vector)
     jarr = JArray(x)
     jobj = convert(JObject, jarr)
-    jwa = jcall(JWrappedArray, "make", JWrappedArray, (JObject,), jobj)
-    return jcall(jwa, "toSeq", JSeq, ())
+    jarrseq = jcall(JArraySeq, "make", JArraySeq, (JObject,), jobj)
+    return jcall(jarrseq, "toSeq", JSeq, ())
+    # jwa = jcall(JWrappedArray, "make", JWrappedArray, (JObject,), jobj)
+    # jwa = jcall(JArraySeq, "make", JArraySeq, (JObject,), jobj)
+    # return jcall(jwa, "toSeq", JSeq, ())
 end
 
 function Base.convert(::Type{JMap}, d::Dict)
