@@ -9,6 +9,8 @@ makedocs(
     sitename = "Spark",
     pages = Any[
         "Introduction" => "index.md",
+        "Getting Started" => "getting_started.md",
+        "Structured Streaming" => "structured_streaming.md",
         "API Reference" => "api.md"
     ]
 )
