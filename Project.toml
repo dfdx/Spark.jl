@@ -15,6 +15,7 @@ Umlaut = "92992a2b-8ce5-4a9c-bb9d-58be9a7dc841"
 [compat]
 IteratorInterfaceExtensions = "1"
 JavaCall = "0.7, 0.8"
+Reexport = "1.2"
 TableTraits = "1"
 julia = "1.6"
 

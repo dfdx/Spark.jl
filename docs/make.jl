@@ -5,11 +5,11 @@ makedocs(
     sitename = "Spark",
     format = Documenter.HTML(),
     modules = [Spark],
-    pages = [
-        "Main" => "index.md",
-        "Cookbook" => "cookbook.md",
-        "Build your own AD" => "design.md",
-        "Reference" => "reference.md",
+    pages = Any[
+        "Introduction" => "intro.md",
+        "SQL / DataFrames" => "sql.md",
+        "Structured Streaming" => "streaming.md",
+        "API Reference" => "api.md"
     ],
 )
 
