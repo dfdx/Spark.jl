@@ -1,4 +1,4 @@
-import Spark.Compiler: jcall2, udf
+import Spark: jcall2, udf
 import Spark.JavaCall: @jimport, jdouble, JString
 
 const JDouble = @jimport java.lang.Double

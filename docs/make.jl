@@ -1,25 +1,19 @@
-using Documenter, Spark
-
-#load_dir(x) = map(file -> joinpath("lib", x, file), readdir(joinpath(Base.source_dir(), "src", "lib", x)))
+using Documenter
+using Spark
 
 makedocs(
-    modules = [Spark],
-    clean = false,
-    format = [:html],
     sitename = "Spark",
-    pages = Any[
-        "Introduction" => "index.md",
-        "Getting Started" => "getting_started.md",
-        "Structured Streaming" => "structured_streaming.md",
-        "API Reference" => "api.md"
-    ]
+    format = Documenter.HTML(),
+    modules = [Spark],
+    pages = [
+        "Main" => "index.md",
+        "Cookbook" => "cookbook.md",
+        "Build your own AD" => "design.md",
+        "Reference" => "reference.md",
+    ],
 )
 
 deploydocs(
-    repo   = "github.com/dfdx/Spark.jl.git",
-    julia  = "0.6",
-    osname = "linux",
-    deps   = nothing,
-    make   = nothing,
-    target = "build",
+    repo = "github.com/dfdx/Spark.jl.git",
+    devbranch = "main",
 )

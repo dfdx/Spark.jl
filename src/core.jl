@@ -5,6 +5,10 @@ import Statistics
 # using TableTraits
 # using IteratorInterfaceExtensions
 
+export SparkSession, DataFrame, GroupedData, Column, Row
+export StructType, StructField, DataType
+export Window, WindowSpec
+
 
 include("chainable.jl")
 include("init.jl")
@@ -26,18 +30,16 @@ function __init__()
 end
 
 
-# During development we use just include("core.jl") and get a single
-# namespace with all the functions. But for the outer world we also
-# provide a set of modules mimicing PySpark package layout
+# pseudo-modules for some specific functions not exported by default
 
 module Compiler
     using Reexport
     @reexport import Spark: udf, jcall2, create_instance, create_class
 end
 
-module SQL
-    using Reexport
-    @reexport import Spark: SparkSession, DataFrame, GroupedData, Column, Row
-    @reexport import Spark: StructType, StructField, DataType
-    @reexport import Spark: Window, WindowSpec
-end
+# module SQL
+#     using Reexport
+#     @reexport import Spark: SparkSession, DataFrame, GroupedData, Column, Row
+#     @reexport import Spark: StructType, StructField, DataType
+#     @reexport import Spark: Window, WindowSpec
+# end
