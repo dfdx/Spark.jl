@@ -1,5 +1,5 @@
 using JavaCall
-import JavaCall: assertroottask_or_goodenv, assertloaded, get_method_id
+import JavaCall: assertroottask_or_goodenv, assertloaded
 using Umlaut
 
 const JInMemoryJavaCompiler = @jimport org.mdkt.compiler.InMemoryJavaCompiler

@@ -6,7 +6,7 @@ makedocs(
     format = Documenter.HTML(),
     modules = [Spark],
     pages = Any[
-        "Introduction" => "intro.md",
+        "Introduction" => "index.md",
         "SQL / DataFrames" => "sql.md",
         "Structured Streaming" => "streaming.md",
         "API Reference" => "api.md"

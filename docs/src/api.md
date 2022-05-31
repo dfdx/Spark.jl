@@ -1,9 +1,11 @@
-
-```@index
+```@meta
+CurrentModule = Spark
 ```
 
+```@docs
+@chainable
+DotChainer
+```
 
-```@autodocs
-Modules = [Spark]
-Order   = [:type, :function]
+```@index
 ```

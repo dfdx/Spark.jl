@@ -36,6 +36,8 @@ const JLong = @jimport java.lang.Long
 const JFloat = @jimport java.lang.Float
 const JDouble = @jimport java.lang.Double
 const JBoolean = @jimport java.lang.Boolean
+const JDate = @jimport java.sql.Date
+const JTimestamp = @jimport java.sql.Timestamp
 
 const JMap = @jimport java.util.Map
 const JHashMap = @jimport java.util.HashMap
@@ -46,6 +48,7 @@ const JArraySeq = @jimport scala.collection.mutable.ArraySeq
 const JSeq = @jimport scala.collection.immutable.Seq
 
 
+toString(jobj::JavaObject) = jcall(jobj, "toString", JString, ())
 
 
 ###############################################################################

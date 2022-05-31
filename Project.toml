@@ -3,6 +3,7 @@ uuid = "e3819d11-95af-5eea-9727-70c091663a01"
 version = "0.6.0"
 
 [deps]
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 IteratorInterfaceExtensions = "82899510-4779-5014-852e-03e436cf321d"
 JavaCall = "494afd89-becb-516b-aafa-70d2670c0337"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
@@ -17,6 +18,7 @@ IteratorInterfaceExtensions = "1"
 JavaCall = "0.7, 0.8"
 Reexport = "1.2"
 TableTraits = "1"
+Umlaut = "0.2"
 julia = "1.6"
 
 [extras]

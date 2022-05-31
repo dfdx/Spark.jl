@@ -2,8 +2,25 @@
 #                                Conversions                                  #
 ###############################################################################
 
+# Note: both - java.sql.Timestamp and Julia's DateTime don't have timezone.
+# But when printing, java.sql.Timestamp will assume UTC and convert to your
+# local time. To avoid confusion e.g. in REPL, try use fixed date in UTC
+# or now(Dates.UTC)
+Base.convert(::Type{JTimestamp}, x::DateTime) =
+    JTimestamp((jlong,), floor(Int, datetime2unix(x)) * 1000)
+Base.convert(::Type{DateTime}, x::JTimestamp) =
+    unix2datetime(jcall(x, "getTime", jlong, ()) / 1000)
+
+Base.convert(::Type{JDate}, x::Date) =
+    JDate((jlong,), floor(Int, datetime2unix(DateTime(x))) * 1000)
+Base.convert(::Type{Date}, x::JDate) =
+    Date(unix2datetime(jcall(x, "getTime", jlong, ()) / 1000))
+
+
 Base.convert(::Type{JObject}, x::Integer) = convert(JObject, convert(JLong, x))
 Base.convert(::Type{JObject}, x::Real) = convert(JObject, convert(JDouble, x))
+Base.convert(::Type{JObject}, x::DateTime) = convert(JObject, convert(JTimestamp, x))
+Base.convert(::Type{JObject}, x::Date) = convert(JObject, convert(JDate, x))
 Base.convert(::Type{JObject}, x::Column) = convert(JObject, x.jcol)
 
 Base.convert(::Type{Row}, obj::JObject) = Row(convert(JRow, obj))
@@ -25,6 +42,8 @@ java2julia(::Type{JInteger}) = Int32
 java2julia(::Type{JDouble}) = Float64
 java2julia(::Type{JFloat}) = Float32
 java2julia(::Type{JBoolean}) = Bool
+java2julia(::Type{JTimestamp}) = DateTime
+java2julia(::Type{JDate}) = Date
 java2julia(::Type{JObject}) = Any
 
 julia2ddl(::Type{String}) = "string"
@@ -33,6 +52,8 @@ julia2ddl(::Type{Int32}) = "int"
 julia2ddl(::Type{Float64}) = "double"
 julia2ddl(::Type{Float32}) = "float"
 julia2ddl(::Type{Bool}) = "boolean"
+julia2ddl(::Type{Dates.Date}) = "date"
+julia2ddl(::Type{Dates.DateTime}) = "timestamp"
 
 
 function JArray(x::Vector{T}) where T
