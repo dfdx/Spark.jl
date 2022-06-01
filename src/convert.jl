@@ -38,10 +38,15 @@ julia2java(::Type{Any}) = JObject
 
 java2julia(::Type{JString}) = String
 java2julia(::Type{JLong}) = Int64
+java2julia(::Type{jlong}) = Int64
 java2julia(::Type{JInteger}) = Int32
+java2julia(::Type{jint}) = Int32
 java2julia(::Type{JDouble}) = Float64
+java2julia(::Type{jdouble}) = Float64
 java2julia(::Type{JFloat}) = Float32
+java2julia(::Type{jfloat}) = Float32
 java2julia(::Type{JBoolean}) = Bool
+java2julia(::Type{jboolean}) = Bool
 java2julia(::Type{JTimestamp}) = DateTime
 java2julia(::Type{JDate}) = Date
 java2julia(::Type{JObject}) = Any

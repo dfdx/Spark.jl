@@ -140,7 +140,7 @@ function getAll(cnf::RuntimeConfig)
     return ret
 end
 
-for JT in (JString, JLong, JBoolean)
+for JT in (JString, jlong, jboolean)
     T = java2julia(JT)
     @eval function set(cnf::RuntimeConfig, key::String, value::$T)
         jcall(cnf.jconf, "set", Nothing, (JString, $JT), key, value)

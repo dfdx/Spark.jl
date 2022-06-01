@@ -3,6 +3,7 @@
 ###############################################################################
 
 Base.show(df::DataFrame) = jcall(df.jdf, "show", Nothing, ())
+Base.show(df::DataFrame, n::Integer) = jcall(df.jdf, "show", Nothing, (jint,), n)
 function Base.show(io::IO, df::DataFrame)
     if df.isstreaming()
         print(io, "DataFrame(...streaming...)")
