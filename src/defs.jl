@@ -60,20 +60,24 @@ struct SparkSessionBuilder
     jbuilder::JSparkSessionBuilder
 end
 
+
 "The entry point to programming Spark with the Dataset and DataFrame API"
 struct SparkSession
     jspark::JSparkSession
 end
+
 
 "User-facing configuration API, accessible through SparkSession.conf"
 struct RuntimeConfig
     jconf::JRuntimeConfig
 end
 
+
 "A distributed collection of data grouped into named columns"
 struct DataFrame
     jdf::JDataset
 end
+
 
 "A set of methods for aggregations on a `DataFrame`, created by `DataFrame.groupBy()`"
 struct GroupedData
@@ -81,50 +85,68 @@ struct GroupedData
     jgdf::JRelationalGroupedDataset
 end
 
+
 "A column in a DataFrame"
 struct Column
     jcol::JColumn
 end
+
 
 "A row in DataFrame"
 struct Row
     jrow::JRow
 end
 
+
 "Struct type, consisting of a list of [`StructField`](@ref)"
 struct StructType
     jst::JStructType
 end
+
 
 "A field in [`StructType`](@ref)"
 struct StructField
     jsf::JStructField
 end
 
+
+"Utility functions for defining window in DataFrames"
 struct Window
     jwin::JWindow
 end
 
+
+"A window specification that defines the partitioning, ordering, and frame boundaries"
 struct WindowSpec
     jwin::JWindowSpec
 end
 
+
+"Interface used to load a `DataFrame` from external storage systems"
 struct DataFrameReader
     jreader::JDataFrameReader
 end
 
+
+"Interface used to write a `DataFrame` to external storage systems"
 struct DataFrameWriter
     jwriter::JDataFrameWriter
 end
 
+
+"Interface used to load a streaming `DataFrame` from external storage systems"
 struct DataStreamReader
     jreader::JDataStreamReader
 end
 
+
+"Interface used to write a streaming `DataFrame` to external"
 struct DataStreamWriter
     jwriter::JDataStreamWriter
 end
 
+
+"A handle to a query that is executing continuously in the background as new data arrives"
 struct StreamingQuery
     jquery::JStreamingQuery
 end
