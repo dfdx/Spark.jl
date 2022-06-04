@@ -1,6 +1,23 @@
+const JSystem = @jimport java.lang.System
 global const SPARK_DEFAULT_PROPS = Dict()
 
-function init()
+
+function set_log_level(log_level::String)
+    JLogger = @jimport org.apache.log4j.Logger
+    JLevel = @jimport org.apache.log4j.Level
+    level = jfield(JLevel, log_level, JLevel)
+    for logger_name in ("org", "akka")
+        logger = jcall(JLogger, "getLogger", JLogger, (JString,), logger_name)
+        jcall(logger, "setLevel", Nothing, (JLevel,), level)
+    end
+end
+
+
+function init(; log_level="WARN")
+    if JavaCall.isloaded()
+        @warn "JVM already initialized, this call will have no effect"
+        return
+    end
     JavaCall.addClassPath(get(ENV, "CLASSPATH", ""))
     defaults = load_spark_defaults(SPARK_DEFAULT_PROPS)
     shome =  get(ENV, "SPARK_HOME", "")
@@ -8,9 +25,9 @@ function init()
         for x in readdir(joinpath(shome, "jars"))
             JavaCall.addClassPath(joinpath(shome, "jars", x))
         end
-        JavaCall.addClassPath(joinpath(dirname(@__FILE__), "..", "jvm", "sparkjl", "target", "sparkjl-0.1.jar"))
+        JavaCall.addClassPath(joinpath(dirname(@__FILE__), "..", "jvm", "sparkjl", "target", "sparkjl-0.2.jar"))
     else
-        JavaCall.addClassPath(joinpath(dirname(@__FILE__), "..", "jvm", "sparkjl", "target", "sparkjl-0.1-assembly.jar"))
+        JavaCall.addClassPath(joinpath(dirname(@__FILE__), "..", "jvm", "sparkjl", "target", "sparkjl-0.2-assembly.jar"))
     end
     for y in split(get(ENV, "SPARK_DIST_CLASSPATH", ""), [':',';'], keepempty=false)
         JavaCall.addClassPath(String(y))
@@ -39,12 +56,15 @@ function init()
     JavaCall.init()
 
     validateJavaVersion()
+
+    set_log_level(log_level)
+
 end
 
 function validateJavaVersion()
     version::String = jcall(JSystem, "getProperty", JString, (JString,), "java.version")
-    if !startswith(version, "1.8")
-        @warn "Java 1.8 is recommended for Spark.jl, but Java $version was used."
+    if !startswith(version, "1.8") && !startswith(version, "11.")
+        @warn "Java 1.8 or 1.11 is recommended for Spark.jl, but Java $version was used."
     end
 end
 

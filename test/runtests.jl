@@ -1,28 +1,26 @@
-using Spark
+if Sys.isunix()
+    ENV["JULIA_COPY_STACKS"] = 1
+end
 
 using Test
+using Spark
+import Statistics.mean
 
-Spark.init()
+Spark.set_log_level("ERROR")
 
-@testset "Spark" begin
+spark = Spark.SparkSession.builder.
+    appName("Hello").
+    master("local").
+    config("some.key", "some-value").
+    getOrCreate()
 
-include("basic.jl")
-include("map.jl")
-include("map_partitions.jl")
-include("attach.jl")
-include("reduce.jl")
-include("text_file.jl")
-include("share_variable.jl")
-include("flat_map.jl")
-include("cartesian.jl")
-include("group_by_key.jl")
-include("reduce_by_key.jl")
-include("collect_pair.jl")
-include("map_pair.jl")
-include("julian_versions.jl")    
-include("repartition_coalesce.jl")
-include("filter.jl")
-include("pipe.jl")
-include("sql.jl")
 
-end
+include("test_chainable.jl")
+include("test_convert.jl")
+include("test_compiler.jl")
+include("test_sql.jl")
+
+spark.stop()
+
+# include("rdd/test_rdd.jl")
+

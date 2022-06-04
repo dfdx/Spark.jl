@@ -1,19 +1,25 @@
 name = "Spark"
 uuid = "e3819d11-95af-5eea-9727-70c091663a01"
-version = "0.5.2"
+version = "0.6.0"
 
 [deps]
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 IteratorInterfaceExtensions = "82899510-4779-5014-852e-03e436cf321d"
 JavaCall = "494afd89-becb-516b-aafa-70d2670c0337"
+Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 Sockets = "6462fe0b-24de-5631-8697-dd941f90decc"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 TableTraits = "3783bdb8-4a98-5b6b-af9a-565f29a5fe9c"
+Umlaut = "92992a2b-8ce5-4a9c-bb9d-58be9a7dc841"
 
 [compat]
-JavaCall = "0.7"
-julia = "1"
-TableTraits = "1"
 IteratorInterfaceExtensions = "1"
+JavaCall = "0.7, 0.8"
+Reexport = "1.2"
+TableTraits = "1"
+Umlaut = "0.2"
+julia = "1.6"
 
 [extras]
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"

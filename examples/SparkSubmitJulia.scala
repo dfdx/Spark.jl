@@ -12,7 +12,7 @@
 *       /opt/julia/depot/helloworld.jl \
 *       /usr/local/julia/bin/julia \
 *       /opt/julia/depot
-* 
+*
 * To compile, use `src/main/scala/SparkSubmitJulia.scala` with a build.sbt like:
 * ---------------------
 * name := "Spark Submit Julia"
