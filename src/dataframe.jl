@@ -6,7 +6,7 @@ Base.show(df::DataFrame) = jcall(df.jdf, "show", Nothing, ())
 Base.show(df::DataFrame, n::Integer) = jcall(df.jdf, "show", Nothing, (jint,), n)
 function Base.show(io::IO, df::DataFrame)
     if df.isstreaming()
-        print(io, "DataFrame(...streaming...)")
+        print(io, toString(df.jdf))
     else
         show(df)
     end
@@ -65,6 +65,12 @@ end
 
 function describe(df::DataFrame, cols::String...)
     jdf = jcall(df.jdf, "describe", JDataset, (Vector{JString},), collect(cols))
+    return DataFrame(jdf)
+end
+
+
+function alias(df::DataFrame, name::String)
+    jdf = jcall(df.jdf, "alias", JDataset, (JString,), name)
     return DataFrame(jdf)
 end
 
