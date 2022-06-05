@@ -20,10 +20,7 @@ Spark.jl supports multiple cluster types (in client mode), and can be considered
 Apache®, [Apache Spark and Spark](http://spark.apache.org) are registered trademarks, or trademarks of the [Apache Software Foundation](http://www.apache.org/) in the United States and/or other countries.
 
 [docs-latest-img]: https://img.shields.io/badge/docs-latest-blue.svg
-[docs-latest-url]: http://dfdx.github.io/Spark.jl/
-
-[docs-stable-img]: https://img.shields.io/badge/docs-stable-blue.svg
-[docs-stable-url]: http://dfdx.github.io/Spark.jl/
+[docs-latest-url]: http://dfdx.github.io/Spark.jl/dev
 
 [gh-test-img]: https://github.com/dfdx/Spark.jl/actions/workflows/test.yml/badge.svg
 [gh-test-url]: https://github.com/dfdx/Spark.jl/actions/workflows/test.yml
