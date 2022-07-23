@@ -11,14 +11,14 @@ Spark.jl supports multiple cluster types (in client mode), and can be considered
 Spark.jl requires at least JDK 8/11 and Maven to be installed and available in PATH.
 
 ```julia
-Pkg.add("Spark.jl")
+] add Spark
 ```
 
 To link against a specific version of Spark, also run:
 
 ```julia
 ENV["BUILD_SPARK_VERSION"] = "3.2.1"   # version you need
-Pkg.build("Spark")
+] build Spark
 ```
 
 ### Quick Example
