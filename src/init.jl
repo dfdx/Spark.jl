@@ -83,7 +83,7 @@ function load_spark_defaults(d::Dict)
     else
         spark_defaults_conf = spark_defaults_locs[conf_idx]
     end
-    p = split(read(spark_defaults_conf, String), '\n', keepempty=false)
+    p = split(Base.read(spark_defaults_conf, String), '\n', keepempty=false)
     for x in p
          if !startswith(x, "#") && !isempty(strip(x))
              y=split(x, limit=2)
