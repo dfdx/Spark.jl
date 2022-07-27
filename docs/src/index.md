@@ -25,8 +25,8 @@ ENV["BUILD_SPARK_VERSION"] = "3.2.1"   # version you need
 
 Note that most types in Spark.jl support dot notation for calling functions, e.g. `x.foo(y)` is expanded into `foo(x, y)`.
 
-```julia
-using Spark.SQL
+```@example
+using Spark
 
 spark = SparkSession.builder.appName("Main").master("local").getOrCreate()
 df = spark.createDataFrame([["Alice", 19], ["Bob", 23]], "name string, age long")
