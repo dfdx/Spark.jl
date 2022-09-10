@@ -2,6 +2,11 @@
 #                            SparkSession.Builder                             #
 ###############################################################################
 
+import Tables
+import TableTraits
+import DataFrames
+import Arrow
+
 @chainable SparkSessionBuilder
 Base.show(io::IO, ::SparkSessionBuilder) = print(io, "SparkSessionBuilder()")
 
@@ -101,6 +106,28 @@ function createDataFrame(spark::SparkSession, rows::Vector{Row})
     return spark.createDataFrame(rows, st)
 end
 
+"Creates Spark DataFrame from the Julia table using Arrow.jl for data transfer."
+function createDataFrame(spark::SparkSession, data::Tables.AbstractColumns)
+    createDataFrameFromTable(spark, data)
+end
+"Creates Spark DataFrame from the Julia table using Arrow.jl for data transfer."
+function createDataFrame(spark::SparkSession, data::DataFrames.AbstractDataFrame)
+    createDataFrameFromTable(spark, data)
+end
+
+"Creates Spark DataFrame from any Tables.jl compatible table. Uses Arrow.jl for data transfer. When localRelation=true a LocalRelation is creates and Spark should be able to perform filter pushdown on JOINs with this DataFrame"
+function createDataFrameFromTable(spark::SparkSession, table, localRelation=false)
+    mktemp() do path,io
+        Arrow.write(path, table; file=false)
+        fn = if localRelation
+            "fromArrow2"
+        else
+            "fromArrow1"
+        end
+        jdf = jcall(JDatasetUtils, fn, JDataset, (JSparkSession,JString), spark.jspark, path)
+        DataFrame(jdf)
+    end
+end
 
 function sql(spark::SparkSession, query::String)
     jdf = jcall(spark.jspark, "sql", JDataset, (JString,), query)

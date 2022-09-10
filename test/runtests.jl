@@ -19,6 +19,7 @@ include("test_chainable.jl")
 include("test_convert.jl")
 include("test_compiler.jl")
 include("test_sql.jl")
+include("test_arrow.jl")
 
 spark.stop()
 

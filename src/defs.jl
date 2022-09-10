@@ -16,6 +16,7 @@ const JDataStreamReader = @jimport org.apache.spark.sql.streaming.DataStreamRead
 const JDataStreamWriter = @jimport org.apache.spark.sql.streaming.DataStreamWriter
 const JStreamingQuery = @jimport org.apache.spark.sql.streaming.StreamingQuery
 const JDataset = @jimport org.apache.spark.sql.Dataset
+const JDatasetUtils = @jimport org.apache.spark.sql.julia.DatasetUtils
 const JRelationalGroupedDataset = @jimport org.apache.spark.sql.RelationalGroupedDataset
 
 # const JRowFactory = @jimport org.apache.spark.sql.RowFactory
