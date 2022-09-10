@@ -19,6 +19,12 @@ function Base.getindex(df::DataFrame, name::String)
     return Column(jcol)
 end
 
+function Base.propertynames(df::DataFrame, private::Bool=false)
+    columns = Symbol.(columns(df))
+    properties = [ :jdf, :printSchema, :show, :count, :first, :head, :collect, :collect_tuples, :collect_df, :collect_arrow, :take, :describe, :alias, :select, :withColumn, :filter, :where, :groupBy, :min, :max, :count, :sum, :mean, :minimum, :maximum, :avg, :createOrReplaceTempView, :isStreaming, :writeStream, :write ]
+    return vcat(columns, properties)
+end
+
 function Base.getproperty(df::DataFrame, prop::Symbol)
     if hasfield(DataFrame, prop)
         return getfield(df, prop)
@@ -147,6 +153,10 @@ end
 ###############################################################################
 
 @chainable GroupedData
+function Base.propertynames(gdf::GroupedData, private::Bool=false)
+    [:show, :agg, :min, :max, :sum, :mean, :minimum, :maximum, :avg, :count]
+end
+
 function Base.show(io::IO, gdf::GroupedData)
     repr = jcall(gdf.jgdf, "toString", JString, ())
     repr = replace(repr, "RelationalGroupedDataset" => "GroupedData")

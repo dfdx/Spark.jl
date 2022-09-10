@@ -38,7 +38,7 @@ end
 ###############################################################################
 #                                 SparkSession                                #
 ###############################################################################
-
+Base.propertynames(::SparkSession, private::Bool=false) = [:version, :stop, :conf, :createDataFrame, :createDataFrameFromTable, :sql]
 @chainable SparkSession
 Base.show(io::IO, ::SparkSession) = print(io, "SparkSession()")
 
