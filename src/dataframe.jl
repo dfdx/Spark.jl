@@ -2,6 +2,11 @@
 #                                  DataFrame                                  #
 ###############################################################################
 
+
+import Arrow
+import DataFrames
+import Tables
+
 Base.show(df::DataFrame) = jcall(df.jdf, "show", Nothing, ())
 Base.show(df::DataFrame, n::Integer) = jcall(df.jdf, "show", Nothing, (jint,), n)
 function Base.show(io::IO, df::DataFrame)
@@ -17,6 +22,12 @@ printSchema(df::DataFrame) = jcall(df.jdf, "printSchema", Nothing, ())
 function Base.getindex(df::DataFrame, name::String)
     jcol = jcall(df.jdf, "col", JColumn, (JString,), name)
     return Column(jcol)
+end
+
+function Base.propertynames(df::DataFrame, private::Bool=false)
+    columns = Symbol.(columns(df))
+    properties = [ :jdf, :printSchema, :show, :count, :first, :head, :collect, :collect_tuples, :collect_df, :collect_arrow, :take, :describe, :alias, :select, :withColumn, :filter, :where, :groupBy, :min, :max, :count, :sum, :mean, :minimum, :maximum, :avg, :createOrReplaceTempView, :isStreaming, :writeStream, :write ]
+    return vcat(columns, properties)
 end
 
 function Base.getproperty(df::DataFrame, prop::Symbol)
@@ -56,6 +67,45 @@ end
 function Base.collect(df::DataFrame, col::Union{<:AbstractString, <:Integer})
     rows = collect(df)
     return [row[col] for row in rows]
+end
+
+"""
+Returns an array of named tuples that contains all rows in this DataFrame.
+```
+julia> spark.sql("select 1 as a, 'x' as b, array(1, 2, 3) as c").collect_tuples()
+1-element Vector{NamedTuple{(:a, :b, :c), Tuple{Int32, String, Vector{Int32}}}}:
+ (a = 1, b = "x", c = [1, 2, 3])
+```
+"""
+function collect_tuples(ds::DataFrame)
+    Tables.rowtable(collect_arrow(ds))
+end
+
+"""
+Returns a DataFrame from DataFrames.jl that contains all rows in this Spark DataFrame.
+```
+julia> spark.sql("select 1 as a, 'x' as b, array(1, 2, 3) as c").collect_df()
+
+1×3 DataFrame
+ Row │ a      b       c              
+     │ Int32  String  Array…         
+─────┼───────────────────────────────
+   1 │     1  x       Int32[1, 2, 3]
+
+```
+"""
+function collect_df(ds::DataFrame)
+    DataFrames.DataFrame(collect_arrow(ds))
+end
+
+
+"""Returns an Arrow.Table that contains all rows in this Dataset.
+   This function will be slightly faster than collect_to_dataframe."""
+function collect_arrow(ds::DataFrame)
+    mktemp() do path,io
+        jcall(JDatasetUtils, "collectToArrow2", Nothing, (JDataset, JString, jboolean), ds.jdf, path, false)
+        Arrow.Table(path)
+    end
 end
 
 function take(df::DataFrame, n::Integer)
@@ -147,6 +197,10 @@ end
 ###############################################################################
 
 @chainable GroupedData
+function Base.propertynames(gdf::GroupedData, private::Bool=false)
+    [:show, :agg, :min, :max, :sum, :mean, :minimum, :maximum, :avg, :count]
+end
+
 function Base.show(io::IO, gdf::GroupedData)
     repr = jcall(gdf.jgdf, "toString", JString, ())
     repr = replace(repr, "RelationalGroupedDataset" => "GroupedData")
