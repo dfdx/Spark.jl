@@ -78,7 +78,7 @@ function load_spark_defaults(d::Dict)
     spark_defaults_locs = [joinpath(sconf, "spark-defaults.conf"),
                            joinpath(sconf, "spark-defaults.conf.template")]
     conf_idx = findfirst(isfile, spark_defaults_locs)
-    if conf_idx == 0
+    if isnothing(conf_idx)
         error("Can't find spark-defaults.conf, looked at: $spark_defaults_locs")
     else
         spark_defaults_conf = spark_defaults_locs[conf_idx]
