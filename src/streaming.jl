@@ -31,8 +31,8 @@ end
 
 for (T, JT) in [(String, JString), (Integer, jlong), (Real, jdouble), (Bool, jboolean)]
     @eval function option(stream::DataStreamReader, key::String, value::$T)
-        jcall(stream.jreader, "option", JDataStreamReader, (JString, $JT), key, value)
-        return stream
+        jreader = jcall(stream.jreader, "option", JDataStreamReader, (JString, $JT), key, value)
+        return DataStreamReader(jreader)
     end
 end
 
@@ -65,21 +65,21 @@ Base.show(io::IO, stream::DataStreamWriter) = print(io, "DataStreamWriter()")
 
 
 function format(writer::DataStreamWriter, fmt::String)
-    jcall(writer.jwriter, "format", JDataStreamWriter, (JString,), fmt)
-    return writer
+    jwriter = jcall(writer.jwriter, "format", JDataStreamWriter, (JString,), fmt)
+    return DataStreamWriter(jwriter)
 end
 
 
 function outputMode(writer::DataStreamWriter, m::String)
-    jcall(writer.jwriter, "outputMode", JDataStreamWriter, (JString,), m)
-    return writer
+    jwriter = jcall(writer.jwriter, "outputMode", JDataStreamWriter, (JString,), m)
+    return DataStreamWriter(jwriter)
 end
 
 
 for (T, JT) in [(String, JString), (Integer, jlong), (Real, jdouble), (Bool, jboolean)]
     @eval function option(writer::DataStreamWriter, key::String, value::$T)
-        jcall(writer.jwriter, "option", JDataStreamWriter, (JString, $JT), key, value)
-        return writer
+        jwriter = jcall(writer.jwriter, "option", JDataStreamWriter, (JString, $JT), key, value)
+        return DataStreamWriter(jwriter)
     end
 end
 
