@@ -1,11 +1,23 @@
-FROM apache/spark:3.5.3-scala2.12-java17-python3-r-ubuntu
+# FROM apache/spark:3.5.3-scala2.12-java17-python3-r-ubuntu
+FROM ubuntu:22.04
 
 
 ## Basic devcontainer setup
 
 ENV user=spark
+
+ENV JAVA_VERSION=8
+
+ENV SCALA_VERSION=2.12
+ENV BINARY_SCALA_VERSION=2.12.12
+
+ENV JULIA_VERSION=1.10.5
+ENV JULIA_VERSION_SHORT=1.10
+
 ENV SPARK_VERSION=3.5.3
-ENV KAFKA_VERSION=2.12-3.8.0
+
+ENV KAFKA_VERSION=${SCALA_VERSION}-3.8.0
+ENV KAFKA_VERSION_SHORT=3.8.0
 
 ENV TERM=xterm-color
 
@@ -62,7 +74,8 @@ RUN apt-get install -y git openssh-server
 
 ## Add user & enable sudo
 
-RUN id -u ${user} &>/dev/null || useradd -ms /bin/bash ${user}
+# RUN id -u ${user} &>/dev/null || useradd -ms /bin/bash ${user}
+RUN id -u ${user} || useradd -ms /bin/bash ${user}
 RUN usermod -aG sudo ${user}
 
 RUN apt-get install -y sudo
@@ -81,22 +94,23 @@ RUN chown ${user}:${user} /home/${user}/.bashrc
 ## Julia
 
 WORKDIR /opt
-RUN curl --output julia.tgz https://julialang-s3.julialang.org/bin/linux/aarch64/1.10/julia-1.10.5-linux-aarch64.tar.gz
+RUN curl --output julia.tgz https://julialang-s3.julialang.org/bin/linux/aarch64/${JULIA_VERSION_SHORT}/julia-${JULIA_VERSION}-linux-aarch64.tar.gz
 RUN tar -xzf julia.tgz
-RUN echo "export PATH=\${PATH}:/opt/julia-1.10.5/bin" >> /home/${user}/.bashrc
+RUN echo "export PATH=\${PATH}:/opt/julia-${JULIA_VERSION}/bin" >> /home/${user}/.bashrc
 RUN rm julia.tgz
 
 
-## Maven
+## Java & Maven
+
+RUN apt-get install -y openjdk-${JAVA_VERSION}-jdk
+RUN update-alternatives --set java $(update-alternatives --list java | grep java-${JAVA_VERSION}) || true
+RUN update-alternatives --set javac $(update-alternatives --list java | grep java-${JAVA_VERSION}) || true
 
 RUN apt-get install -y maven
 
 
 ## Spark
-# suddenly, Spark from the docker doesn't contain some critical
-# config files, so we install a fresh version isntead
 WORKDIR /opt
-RUN mv spark spark.orig
 RUN curl --output spark.tgz https://dlcdn.apache.org/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz
 RUN tar -xzf spark.tgz
 RUN mv spark-${SPARK_VERSION}-bin-hadoop3 spark
@@ -105,7 +119,7 @@ RUN mv spark-${SPARK_VERSION}-bin-hadoop3 spark
 
 ## Kafka
 WORKDIR /opt
-RUN curl --output kafka.tgz https://dlcdn.apache.org/kafka/3.8.0/kafka_${KAFKA_VERSION}.tgz
+RUN curl --output kafka.tgz https://dlcdn.apache.org/kafka/${KAFKA_VERSION_SHORT}/kafka_${KAFKA_VERSION}.tgz
 RUN tar -xzf kafka.tgz
 RUN echo "export PATH=\${PATH}:/opt/kafka_${KAFKA_VERSION}/bin" >> /home/${user}/.bashrc
 RUN rm kafka.tgz
@@ -119,7 +133,13 @@ RUN chmod -R a+rwx /opt/kafka_${KAFKA_VERSION}/logs
 ## Spark.jl
 
 USER ${user}
-RUN /opt/julia-1.10.5/bin/julia -e 'import Pkg; Pkg.add("Spark")'
+
+ENV BUILD_SCALA_VERSION=${SCALA_VERSION}
+ENV BUILD_BINARY_SCALA_VERSION=${BINARY_SCALA_VERSION}
+ENV BUILD_SPARK_VERSION=${SPARK_VERSION}
+
+# TODO: uncomment and test
+# RUN /opt/julia-${JULIA_VERSION}/bin/julia -e 'import Pkg; Pkg.add("Spark")'
 
 
 ## Launch

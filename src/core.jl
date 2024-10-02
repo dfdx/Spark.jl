@@ -1,3 +1,5 @@
+__precompile__(false)   # because JavaCall doesn't support precompilation
+
 using JavaCall
 using Umlaut
 import Umlaut.V
