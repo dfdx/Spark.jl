@@ -15,12 +15,30 @@ function master(builder::SparkSessionBuilder, uri::String)
     return builder
 end
 
-for JT in (JString, JDouble, JLong, JBoolean)
+sparkjl_jar() = joinpath(dirname(@__FILE__), "..", "jvm", "sparkjl", "target", "sparkjl-0.2.jar")
+
+for JT in (JDouble, JLong, JBoolean)
     T = java2julia(JT)
     @eval function config(builder::SparkSessionBuilder, key::String, value::$T)
         jcall(builder.jbuilder, "config", JSparkSessionBuilder, (JString, $JT), key, value)
         return builder
     end
+end
+
+
+const SPARK_JARS = String[sparkjl_jar()]
+
+function config(builder::SparkSessionBuilder, key::String, value::String)
+    if key == "spark.jars"
+        # User attempts to set spark.jars config. Later we also need to add
+        # our own sparkjl.jar, but SparkSessionBuilder does allow to retrieve
+        # previous value. Thus instead of setting the value immediately,
+        # we save it to a global variable and use later in getOrCreate()
+        push!(SPARK_JARS, split(value, ",")...)
+    else
+        jcall(builder.jbuilder, "config", JSparkSessionBuilder, (JString, JString), key, value)
+    end
+    return builder
 end
 
 function enableHiveSupport(builder::SparkSessionBuilder)
@@ -29,7 +47,10 @@ function enableHiveSupport(builder::SparkSessionBuilder)
 end
 
 function getOrCreate(builder::SparkSessionBuilder)
-    config(builder, "spark.jars", joinpath(dirname(@__FILE__), "..", "jvm", "sparkjl", "target", "sparkjl-0.2.jar"))
+    # set "spark.jars", including sparkjl.jar and any values
+    # set via config(::SparkSessionBuilder, ::String, ::String)
+    spark_jars = join(SPARK_JARS, ",")
+    jcall(builder.jbuilder, "config", JSparkSessionBuilder, (JString, JString), "spark.jars", spark_jars)
     jspark = jcall(builder.jbuilder, "getOrCreate", JSparkSession, ())
     return SparkSession(jspark)
 end

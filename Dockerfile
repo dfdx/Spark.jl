@@ -14,7 +14,7 @@ ENV BINARY_SCALA_VERSION=2.12.12
 ENV JULIA_VERSION=1.10.5
 ENV JULIA_VERSION_SHORT=1.10
 
-ENV SPARK_VERSION=3.5.3
+ENV SPARK_VERSION=3.5.2
 
 ENV KAFKA_VERSION=${SCALA_VERSION}-3.8.0
 ENV KAFKA_VERSION_SHORT=3.8.0
@@ -111,7 +111,8 @@ RUN apt-get install -y maven
 
 ## Spark
 WORKDIR /opt
-RUN curl --output spark.tgz https://dlcdn.apache.org/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz
+# RUN curl --output spark.tgz https://dlcdn.apache.org/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz
+RUN curl --output spark.tgz https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz
 RUN tar -xzf spark.tgz
 RUN mv spark-${SPARK_VERSION}-bin-hadoop3 spark
 
